@@ -456,7 +456,7 @@ class FeatureLoader {
     if (!existingFeature.steps && !updates.steps) updates.steps = [];
     if (!existingFeature.images) updates.images = [];
     if (!existingFeature.imagePaths) updates.imagePaths = [];
-    if (existingFeature.skipTests === undefined) updates.skipTests = true;
+    if (existingFeature.skipTests === undefined) updates.skipTests = false;
     if (!existingFeature.model) updates.model = "sonnet";
     if (!existingFeature.thinkingLevel) updates.thinkingLevel = "none";
 
