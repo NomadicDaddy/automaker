@@ -143,6 +143,80 @@
   --running-indicator-text: oklch(0.6 0.22 265);
 }
 
+/* Apply dark mode immediately based on system preference (before JS runs) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Deep dark backgrounds - zinc-950 family */
+    --background: oklch(0.04 0 0); /* zinc-950 */
+    --background-50: oklch(0.04 0 0 / 0.5); /* zinc-950/50 */
+    --background-80: oklch(0.04 0 0 / 0.8); /* zinc-950/80 */
+
+    /* Text colors following hierarchy */
+    --foreground: oklch(1 0 0); /* text-white */
+    --foreground-secondary: oklch(0.588 0 0); /* text-zinc-400 */
+    --foreground-muted: oklch(0.525 0 0); /* text-zinc-500 */
+
+    /* Card and popover backgrounds */
+    --card: oklch(0.14 0 0);
+    --card-foreground: oklch(1 0 0);
+    --popover: oklch(0.10 0 0);
+    --popover-foreground: oklch(1 0 0);
+
+    /* Brand colors - purple/violet theme */
+    --primary: oklch(0.55 0.25 265);
+    --primary-foreground: oklch(1 0 0);
+    --brand-400: oklch(0.6 0.22 265);
+    --brand-500: oklch(0.55 0.25 265);
+    --brand-600: oklch(0.5 0.28 270);
+
+    /* Glass morphism borders and accents */
+    --secondary: oklch(1 0 0 / 0.05);
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.176 0 0);
+    --muted-foreground: oklch(0.588 0 0);
+    --accent: oklch(1 0 0 / 0.1);
+    --accent-foreground: oklch(1 0 0);
+
+    /* Borders with transparency for glass effect */
+    --border: oklch(0.176 0 0);
+    --border-glass: oklch(1 0 0 / 0.1);
+    --destructive: oklch(0.6 0.25 25);
+    --input: oklch(0.04 0 0 / 0.8);
+    --ring: oklch(0.55 0.25 265);
+
+    /* Chart colors with brand theme */
+    --chart-1: oklch(0.55 0.25 265);
+    --chart-2: oklch(0.65 0.2 160);
+    --chart-3: oklch(0.75 0.2 70);
+    --chart-4: oklch(0.6 0.25 300);
+    --chart-5: oklch(0.6 0.25 20);
+
+    /* Sidebar with glass morphism */
+    --sidebar: oklch(0.04 0 0 / 0.5);
+    --sidebar-foreground: oklch(1 0 0);
+    --sidebar-primary: oklch(0.55 0.25 265);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(1 0 0 / 0.05);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(1 0 0 / 0.1);
+    --sidebar-ring: oklch(0.55 0.25 265);
+
+    /* Action button colors */
+    --action-view: oklch(0.6 0.25 265);
+    --action-view-hover: oklch(0.55 0.27 270);
+    --action-followup: oklch(0.6 0.2 230);
+    --action-followup-hover: oklch(0.55 0.22 230);
+    --action-commit: oklch(0.55 0.2 140);
+    --action-commit-hover: oklch(0.5 0.22 140);
+    --action-verify: oklch(0.55 0.2 140);
+    --action-verify-hover: oklch(0.5 0.22 140);
+
+    /* Running indicator - Purple */
+    --running-indicator: oklch(0.6 0.25 265);
+    --running-indicator-text: oklch(0.65 0.22 265);
+  }
+}
+
 .light {
   /* Explicit light mode - same as root but ensures it overrides any dark defaults */
   --background: oklch(1 0 0); /* White */
@@ -211,10 +285,10 @@
   --foreground-secondary: oklch(0.588 0 0); /* text-zinc-400 */
   --foreground-muted: oklch(0.525 0 0); /* text-zinc-500 */
 
-  /* Glass morphism effects */
-  --card: oklch(0.04 0 0 / 0.5); /* zinc-950/50 with transparency */
+  /* Card and popover backgrounds */
+  --card: oklch(0.14 0 0); /* slightly lighter than background for contrast */
   --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.04 0 0 / 0.8); /* zinc-950/80 for popover */
+  --popover: oklch(0.10 0 0); /* slightly lighter than background */
   --popover-foreground: oklch(1 0 0);
 
   /* Brand colors - purple/violet theme */

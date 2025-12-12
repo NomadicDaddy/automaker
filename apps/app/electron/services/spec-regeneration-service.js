@@ -390,15 +390,13 @@ class SpecRegenerationService {
 3. For EACH feature in the implementation_roadmap:
    - Determine if it's ALREADY IMPLEMENTED (fully or partially)
    - If fully implemented: Create with status "verified" and note what's done
-   - If partially implemented: Create with status "in_progress" and note remaining work
-   - If not started: Create with status "backlog"
+   - If partially implemented OR not started: Create with status "backlog" and note what still needs to be done
 
 **IMPORTANT - For each feature you MUST provide:**
 - **featureId**: A descriptive ID (lowercase, hyphens for spaces). Example: "user-authentication", "budget-tracking"
-- **status**: 
-  - "verified" if feature is fully implemented in the codebase
-  - "in_progress" if partially implemented
-  - "backlog" if not yet started
+- **status**:
+  - "verified" ONLY if feature is 100% fully implemented in the codebase
+  - "backlog" for ALL features that need ANY work (partial or not started) - the user will manually start these
 - **description**: A DETAILED description (2-4 sentences) explaining what the feature does, its purpose, and key functionality
 - **category**: The phase from the roadmap (e.g., "Phase 1: Foundation", "Phase 2: Core Logic", "Phase 3: Polish")
 - **steps**: An array of 4-8 clear, actionable implementation steps. For verified features, these are what WAS done. For backlog, these are what NEEDS to be done.
@@ -407,10 +405,12 @@ class SpecRegenerationService {
 **Example of analyzing existing code:**
 If you find NextAuth.js configured in the codebase with working login pages, the user-authentication feature should be "verified" not "backlog".
 
-**Example of a well-defined feature:**
+**IMPORTANT: NEVER use "in_progress" status when creating features. Only use "verified" or "backlog".**
+
+**Example of a well-defined feature (verified - fully complete):**
 {
   "featureId": "user-authentication",
-  "status": "verified",  // Because we found it's already implemented
+  "status": "verified",  // Because we found it's 100% already implemented
   "description": "Secure user authentication system with email/password login and session management. Already implemented using NextAuth.js with email provider.",
   "category": "Phase 1: Foundation",
   "steps": [
@@ -420,6 +420,21 @@ If you find NextAuth.js configured in the codebase with working login pages, the
     "Implement session management - DONE"
   ],
   "summary": "Authentication implemented with NextAuth.js email provider"
+}
+
+**Example of a feature that needs work (backlog):**
+{
+  "featureId": "user-profile",
+  "status": "backlog",  // Needs work - user will manually start this
+  "description": "User profile page where users can view and edit their account settings, change password, and manage preferences.",
+  "category": "Phase 2: Core Features",
+  "steps": [
+    "Create profile page component",
+    "Add form for editing user details",
+    "Implement password change functionality",
+    "Add avatar upload feature"
+  ],
+  "summary": "User profile management - needs implementation"
 }
 
 **Feature Storage:**
@@ -453,13 +468,15 @@ Use the UpdateFeatureStatus tool to create features with ALL the fields above.`,
 2. **Then, read .automaker/app_spec.txt** to see the implementation roadmap
 
 3. **For EACH feature in the roadmap, determine its status:**
-   - Is it ALREADY IMPLEMENTED in the codebase? → status: "verified"
-   - Is it PARTIALLY IMPLEMENTED? → status: "in_progress"  
-   - Is it NOT STARTED? → status: "backlog"
+   - Is it 100% FULLY IMPLEMENTED in the codebase? → status: "verified"
+   - Is it PARTIALLY IMPLEMENTED or NOT STARTED? → status: "backlog"
+
+   **CRITICAL: NEVER use "in_progress" status. Only use "verified" or "backlog".**
+   The user will manually move features from backlog to in_progress when they want to start working on them.
 
 4. **Create each feature with UpdateFeatureStatus including ALL fields:**
    - featureId: Descriptive ID (lowercase, hyphens)
-   - status: "verified", "in_progress", or "backlog" based on your analysis
+   - status: "verified" or "backlog" ONLY (never in_progress)
    - description: 2-4 sentences explaining the feature
    - category: The phase name from the roadmap
    - steps: Array of 4-8 implementation steps
@@ -588,7 +605,7 @@ You should:
 4. Based on the user's project overview, create a comprehensive app specification
 5. Be liberal and comprehensive when defining features - include everything needed for a complete, polished application
 6. Use the XML template format provided
-7. Write the specification to .automaker/app_spec.txt
+7. **MANDATORY: Write the spec to EXACTLY \`.automaker/app_spec.txt\` - this exact filename, no alternatives**
 
 When analyzing, look at:
 - package.json, cargo.toml, requirements.txt or similar config files for tech stack
@@ -598,11 +615,17 @@ When analyzing, look at:
 - API structures and patterns
 
 You CAN and SHOULD modify:
-- .automaker/app_spec.txt (this is your primary target)
+- .automaker/app_spec.txt (this is your ONLY target file - use EXACTLY this filename)
 
-You have access to file reading, writing, and search tools. Use them to understand the codebase and write the new spec.
+You have access to file reading, writing, and search tools. Use them to understand the codebase and WRITE the new spec to .automaker/app_spec.txt.
 
-**IMPORTANT:** Focus ONLY on creating the app_spec.txt file. Do NOT create any feature files or use any feature management tools during this phase.`;
+**IMPORTANT:** Focus ONLY on creating the app_spec.txt file. Do NOT create any feature files or use any feature management tools during this phase.
+
+**CRITICAL FILE NAMING RULES:**
+- The spec file MUST be named exactly \`app_spec.txt\`
+- Do NOT create project-spec.md, spec.md, or any other filename
+- Do NOT use markdown (.md) extension - use .txt
+- The full path must be: \`.automaker/app_spec.txt\``;
   }
 
   /**
@@ -639,7 +662,11 @@ ${APP_SPEC_XML_TEMPLATE}
    - **development_workflow**: Note any testing or development patterns
    - **implementation_roadmap**: Break down the features into phases - be VERY detailed here, listing every feature that needs to be built
 
-4. **IMPORTANT**: Write the complete specification to the file \`.automaker/app_spec.txt\`
+4. **MANDATORY FILE WRITE**: You MUST write the spec to EXACTLY this file path: \`.automaker/app_spec.txt\`
+   - The filename MUST be exactly \`app_spec.txt\` - do NOT use any other name
+   - Do NOT create \`project-spec.md\`, \`spec.md\`, or any other filename
+   - Do NOT output the spec in your response - write it to the file
+   - Use the Write tool with path \`.automaker/app_spec.txt\`
 
 **Guidelines:**
 - Be comprehensive! Include ALL features needed for a complete application
@@ -648,8 +675,9 @@ ${APP_SPEC_XML_TEMPLATE}
 - The implementation_roadmap should reflect logical phases for building out the app - list EVERY feature individually
 - Consider user flows, error states, and edge cases when defining features
 - Each phase should have multiple specific, actionable features
+- **CRITICAL: Write to EXACTLY \`.automaker/app_spec.txt\` - not project-spec.md or any other name!**
 
-Begin by exploring the project structure.`;
+Begin by exploring the project structure, then generate and WRITE the spec to \`.automaker/app_spec.txt\`.`;
   }
 
   /**
@@ -848,7 +876,7 @@ You should:
 3. Understand the current architecture and patterns used
 4. Based on the user's project definition, create a comprehensive app specification that includes ALL features needed to realize their vision
 5. Be liberal and comprehensive when defining features - include everything needed for a complete, polished application
-6. Write the specification to .automaker/app_spec.txt
+6. **MANDATORY: Write the spec to EXACTLY \`.automaker/app_spec.txt\` - this exact filename, no alternatives**
 
 When analyzing, look at:
 - package.json, cargo.toml, or similar config files for tech stack
@@ -861,9 +889,15 @@ When analyzing, look at:
 Your task is ONLY to update the app_spec.txt file - feature files will be managed separately.
 
 You CAN and SHOULD modify:
-- .automaker/app_spec.txt (this is your primary target)
+- .automaker/app_spec.txt (this is your ONLY target file - use EXACTLY this filename)
 
-You have access to file reading, writing, and search tools. Use them to understand the codebase and write the new spec.`;
+You have access to file reading, writing, and search tools. Use them to understand the codebase and WRITE the new spec to .automaker/app_spec.txt.
+
+**CRITICAL FILE NAMING RULES:**
+- The spec file MUST be named exactly \`app_spec.txt\`
+- Do NOT create project-spec.md, spec.md, or any other filename
+- Do NOT use markdown (.md) extension - use .txt
+- The full path must be: \`.automaker/app_spec.txt\``;
   }
 
   /**
@@ -892,37 +926,40 @@ ${projectDefinition}
      - Think about user experience, error handling, edge cases, etc.
    - Architecture Notes: Any important architectural decisions or patterns
 
-3. **IMPORTANT**: Write the complete specification to the file \`.automaker/app_spec.txt\`
+3. **MANDATORY FILE WRITE**: You MUST write the spec to EXACTLY this file path: \`.automaker/app_spec.txt\`
+   - The filename MUST be exactly \`app_spec.txt\` - do NOT use any other name
+   - Do NOT create \`project-spec.md\`, \`spec.md\`, or any other filename
+   - Do NOT output the spec in your response - write it to the file
+   - Use the Write tool with path \`.automaker/app_spec.txt\`
 
-**Format Guidelines for the Spec:**
+**Format Guidelines for the Spec (use XML format in app_spec.txt):**
 
-Use this general structure:
+Use this XML structure inside app_spec.txt:
 
-\`\`\`
-# [App Name] - Application Specification
-
-## Product Overview
-[Description of what the app does and its purpose]
-
-## Tech Stack
-- Frontend: [frameworks, libraries]
-- Backend: [frameworks, APIs]
-- Database: [if applicable]
-- Other: [other relevant tech]
-
-## Features
-
-### [Category 1]
-- **[Feature Name]**: [Detailed description of the feature]
-- **[Feature Name]**: [Detailed description]
-...
-
-### [Category 2]
-- **[Feature Name]**: [Detailed description]
-...
-
-## Architecture Notes
-[Any important architectural notes, patterns, or conventions]
+\`\`\`xml
+<project_specification>
+  <project_name>[App Name]</project_name>
+  
+  <overview>
+    [Description of what the app does and its purpose]
+  </overview>
+  
+  <technology_stack>
+    <frontend>[frameworks, libraries]</frontend>
+    <backend>[frameworks, APIs]</backend>
+    <database>[if applicable]</database>
+  </technology_stack>
+  
+  <core_capabilities>
+    [List all the major capabilities]
+  </core_capabilities>
+  
+  <implementation_roadmap>
+    <phase_1>[Foundation features]</phase_1>
+    <phase_2>[Core features]</phase_2>
+    <phase_3>[Polish features]</phase_3>
+  </implementation_roadmap>
+</project_specification>
 \`\`\`
 
 **Remember:**
@@ -930,9 +967,9 @@ Use this general structure:
 - Consider user flows, error states, loading states, etc.
 - Include authentication, authorization if relevant
 - Think about what would make this a polished, production-ready app
-- The more detailed and complete the spec, the better
+- **CRITICAL: Write to EXACTLY \`.automaker/app_spec.txt\` - not project-spec.md or any other name!**
 
-Begin by exploring the project structure.`;
+Begin by exploring the project structure, then generate and WRITE the spec to \`.automaker/app_spec.txt\`.`;
   }
 
   /**

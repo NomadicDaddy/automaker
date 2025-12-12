@@ -82,12 +82,14 @@ export function SettingsView() {
   // Compute the effective theme for the current project
   const effectiveTheme = (settingsProject?.theme || theme) as Theme;
 
-  // Handler to set theme - saves to project if one is selected, otherwise to global
+  // Handler to set theme - always updates global theme (user's preference),
+  // and also sets per-project theme if a project is selected
   const handleSetTheme = (newTheme: typeof theme) => {
+    // Always update global theme so user's preference persists across all projects
+    setTheme(newTheme);
+    // Also set per-project theme if a project is selected
     if (currentProject) {
       setProjectTheme(currentProject.id, newTheme);
-    } else {
-      setTheme(newTheme);
     }
   };
 

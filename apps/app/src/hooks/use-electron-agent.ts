@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Message, StreamEvent } from "@/types/electron";
 import { useMessageQueue } from "./use-message-queue";
 import type { ImageAttachment } from "@/store/app-store";
+import { getElectronAPI } from "@/lib/electron";
 
 interface UseElectronAgentOptions {
   sessionId: string;
@@ -44,8 +45,9 @@ export function useElectronAgent({
   // Send message directly to the agent (bypassing queue)
   const sendMessageDirectly = useCallback(
     async (content: string, images?: ImageAttachment[]) => {
-      if (!window.electronAPI?.agent) {
-        setError("Electron API not available");
+      const api = getElectronAPI();
+      if (!api?.agent) {
+        setError("API not available");
         return;
       }
 
@@ -64,10 +66,10 @@ export function useElectronAgent({
 
         // Save images to .automaker/images and get paths
         let imagePaths: string[] | undefined;
-        if (images && images.length > 0) {
+        if (images && images.length > 0 && api.saveImageToTemp) {
           imagePaths = [];
           for (const image of images) {
-            const result = await window.electronAPI.saveImageToTemp(
+            const result = await api.saveImageToTemp(
               image.data,
               image.filename,
               image.mimeType,
@@ -82,7 +84,7 @@ export function useElectronAgent({
           }
         }
 
-        const result = await window.electronAPI.agent.send(
+        const result = await api.agent!.send(
           sessionId,
           content,
           workingDirectory,
@@ -120,8 +122,9 @@ export function useElectronAgent({
 
   // Initialize connection and load history
   useEffect(() => {
-    if (!window.electronAPI?.agent) {
-      setError("Electron API not available. Please run in Electron.");
+    const api = getElectronAPI();
+    if (!api?.agent) {
+      setError("API not available.");
       return;
     }
 
@@ -142,7 +145,7 @@ export function useElectronAgent({
 
       try {
         console.log("[useElectronAgent] Starting session:", sessionId);
-        const result = await window.electronAPI.agent.start(
+        const result = await api.agent!.start(
           sessionId,
           workingDirectory
         );
@@ -155,7 +158,7 @@ export function useElectronAgent({
           setIsConnected(true);
 
           // Check if the agent is currently running for this session
-          const historyResult = await window.electronAPI.agent.getHistory(sessionId);
+          const historyResult = await api.agent!.getHistory(sessionId);
           if (mounted && historyResult.success) {
             const isRunning = historyResult.isRunning || false;
             console.log("[useElectronAgent] Session running state:", isRunning);
@@ -190,7 +193,8 @@ export function useElectronAgent({
 
   // Subscribe to streaming events
   useEffect(() => {
-    if (!window.electronAPI?.agent) return;
+    const api = getElectronAPI();
+    if (!api?.agent) return;
     if (!sessionId) return; // Don't subscribe if no session
 
     console.log("[useElectronAgent] Subscribing to stream events for session:", sessionId);
@@ -282,7 +286,7 @@ export function useElectronAgent({
       }
     };
 
-    unsubscribeRef.current = window.electronAPI.agent.onStream(handleStream);
+    unsubscribeRef.current = api.agent!.onStream(handleStream as (data: unknown) => void);
 
     return () => {
       if (unsubscribeRef.current) {
@@ -296,8 +300,9 @@ export function useElectronAgent({
   // Send a message to the agent
   const sendMessage = useCallback(
     async (content: string, images?: ImageAttachment[]) => {
-      if (!window.electronAPI?.agent) {
-        setError("Electron API not available");
+      const api = getElectronAPI();
+      if (!api?.agent) {
+        setError("API not available");
         return;
       }
 
@@ -317,10 +322,10 @@ export function useElectronAgent({
 
         // Save images to .automaker/images and get paths
         let imagePaths: string[] | undefined;
-        if (images && images.length > 0) {
+        if (images && images.length > 0 && api.saveImageToTemp) {
           imagePaths = [];
           for (const image of images) {
-            const result = await window.electronAPI.saveImageToTemp(
+            const result = await api.saveImageToTemp(
               image.data,
               image.filename,
               image.mimeType,
@@ -335,7 +340,7 @@ export function useElectronAgent({
           }
         }
 
-        const result = await window.electronAPI.agent.send(
+        const result = await api.agent!.send(
           sessionId,
           content,
           workingDirectory,
@@ -359,14 +364,15 @@ export function useElectronAgent({
 
   // Stop current execution
   const stopExecution = useCallback(async () => {
-    if (!window.electronAPI?.agent) {
-      setError("Electron API not available");
+    const api = getElectronAPI();
+    if (!api?.agent) {
+      setError("API not available");
       return;
     }
 
     try {
       console.log("[useElectronAgent] Stopping execution");
-      const result = await window.electronAPI.agent.stop(sessionId);
+      const result = await api.agent!.stop(sessionId);
 
       if (!result.success) {
         setError(result.error || "Failed to stop execution");
@@ -381,14 +387,15 @@ export function useElectronAgent({
 
   // Clear conversation history
   const clearHistory = useCallback(async () => {
-    if (!window.electronAPI?.agent) {
-      setError("Electron API not available");
+    const api = getElectronAPI();
+    if (!api?.agent) {
+      setError("API not available");
       return;
     }
 
     try {
       console.log("[useElectronAgent] Clearing history");
-      const result = await window.electronAPI.agent.clear(sessionId);
+      const result = await api.agent!.clear(sessionId);
 
       if (result.success) {
         setMessages([]);

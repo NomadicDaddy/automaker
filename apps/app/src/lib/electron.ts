@@ -1,4 +1,5 @@
 // Type definitions for Electron IPC API
+import type { SessionListItem, Message } from "@/types/electron";
 
 export interface FileEntry {
   name: string;
@@ -413,6 +414,68 @@ export interface ElectronAPI {
     onInstallProgress?: (callback: (progress: any) => void) => () => void;
     onAuthProgress?: (callback: (progress: any) => void) => () => void;
   };
+  agent?: {
+    start: (
+      sessionId: string,
+      workingDirectory?: string
+    ) => Promise<{
+      success: boolean;
+      messages?: Message[];
+      error?: string;
+    }>;
+    send: (
+      sessionId: string,
+      message: string,
+      workingDirectory?: string,
+      imagePaths?: string[]
+    ) => Promise<{ success: boolean; error?: string }>;
+    getHistory: (sessionId: string) => Promise<{
+      success: boolean;
+      messages?: Message[];
+      isRunning?: boolean;
+      error?: string;
+    }>;
+    stop: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+    clear: (sessionId: string) => Promise<{ success: boolean; error?: string }>;
+    onStream: (callback: (data: unknown) => void) => () => void;
+  };
+  sessions?: {
+    list: (includeArchived?: boolean) => Promise<{
+      success: boolean;
+      sessions?: SessionListItem[];
+      error?: string;
+    }>;
+    create: (
+      name: string,
+      projectPath: string,
+      workingDirectory?: string
+    ) => Promise<{
+      success: boolean;
+      session?: {
+        id: string;
+        name: string;
+        projectPath: string;
+        workingDirectory?: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+      error?: string;
+    }>;
+    update: (
+      sessionId: string,
+      name?: string,
+      tags?: string[]
+    ) => Promise<{ success: boolean; error?: string }>;
+    archive: (
+      sessionId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+    unarchive: (
+      sessionId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+    delete: (
+      sessionId: string
+    ) => Promise<{ success: boolean; error?: string }>;
+  };
 }
 
 // Note: Window interface is declared in @/types/electron.d.ts
@@ -438,18 +501,92 @@ const STORAGE_KEYS = {
 // Mock file system using localStorage
 const mockFileSystem: Record<string, string> = {};
 
-// Check if we're in Electron
+// Check if we're in Electron (for UI indicators only)
 export const isElectron = (): boolean => {
   return typeof window !== "undefined" && window.isElectron === true;
 };
 
-// Get the Electron API or a mock for web development
+// Check if backend server is available
+let serverAvailable: boolean | null = null;
+let serverCheckPromise: Promise<boolean> | null = null;
+
+export const checkServerAvailable = async (): Promise<boolean> => {
+  if (serverAvailable !== null) return serverAvailable;
+  if (serverCheckPromise) return serverCheckPromise;
+
+  serverCheckPromise = (async () => {
+    try {
+      const serverUrl =
+        process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3008";
+      const response = await fetch(`${serverUrl}/api/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(2000),
+      });
+      serverAvailable = response.ok;
+    } catch {
+      serverAvailable = false;
+    }
+    return serverAvailable;
+  })();
+
+  return serverCheckPromise;
+};
+
+// Reset server check (useful for retrying connection)
+export const resetServerCheck = (): void => {
+  serverAvailable = null;
+  serverCheckPromise = null;
+};
+
+// Cached HTTP client instance
+let httpClientInstance: ElectronAPI | null = null;
+
+/**
+ * Get the HTTP API client
+ *
+ * All API calls go through HTTP to the backend server.
+ * This is the only transport mode supported.
+ */
 export const getElectronAPI = (): ElectronAPI => {
-  if (isElectron() && window.electronAPI) {
-    return window.electronAPI;
+  if (typeof window === "undefined") {
+    throw new Error("Cannot get API during SSR");
   }
 
-  // Return mock API for web development
+  if (!httpClientInstance) {
+    const { getHttpApiClient } = require("./http-api-client");
+    httpClientInstance = getHttpApiClient();
+  }
+  return httpClientInstance!;
+};
+
+// Async version (same as sync since HTTP client is synchronously instantiated)
+export const getElectronAPIAsync = async (): Promise<ElectronAPI> => {
+  return getElectronAPI();
+};
+
+// Check if backend is connected (for showing connection status in UI)
+export const isBackendConnected = async (): Promise<boolean> => {
+  return await checkServerAvailable();
+};
+
+/**
+ * Get the current API mode being used
+ * Always returns "http" since that's the only mode now
+ */
+export const getCurrentApiMode = (): "http" => {
+  return "http";
+};
+
+// Debug helpers
+if (typeof window !== "undefined") {
+  (window as any).__checkApiMode = () => {
+    console.log("Current API mode:", getCurrentApiMode());
+    console.log("isElectron():", isElectron());
+  };
+}
+
+// Mock API for development/fallback when no backend is available
+const getMockElectronAPI = (): ElectronAPI => {
   return {
     ping: async () => "pong (mock)",
 
@@ -748,17 +885,21 @@ interface SetupAPI {
   getClaudeStatus: () => Promise<{
     success: boolean;
     status?: string;
+    installed?: boolean;
     method?: string;
     version?: string;
     path?: string;
     auth?: {
       authenticated: boolean;
       method: string;
-      hasCredentialsFile: boolean;
-      hasToken: boolean;
+      hasCredentialsFile?: boolean;
+      hasToken?: boolean;
       hasStoredOAuthToken?: boolean;
       hasStoredApiKey?: boolean;
       hasEnvApiKey?: boolean;
+      hasEnvOAuthToken?: boolean;
+      hasCliAuth?: boolean;
+      hasRecentActivity?: boolean;
     };
     error?: string;
   }>;
@@ -838,11 +979,14 @@ function createMockSetupAPI(): SetupAPI {
       return {
         success: true,
         status: "not_installed",
+        installed: false,
         auth: {
           authenticated: false,
           method: "none",
           hasCredentialsFile: false,
           hasToken: false,
+          hasCliAuth: false,
+          hasRecentActivity: false,
         },
       };
     },
@@ -1866,7 +2010,9 @@ function createMockSpecRegenerationAPI(): SpecRegenerationAPI {
       }
 
       mockSpecRegenerationRunning = true;
-      console.log(`[Mock] Generating features from existing spec for: ${projectPath}`);
+      console.log(
+        `[Mock] Generating features from existing spec for: ${projectPath}`
+      );
 
       // Simulate async feature generation
       simulateFeatureGeneration(projectPath);
@@ -2053,7 +2199,8 @@ async function simulateFeatureGeneration(projectPath: string) {
   mockSpecRegenerationPhase = "initialization";
   emitSpecRegenerationEvent({
     type: "spec_regeneration_progress",
-    content: "[Phase: initialization] Starting feature generation from existing app_spec.txt...\n",
+    content:
+      "[Phase: initialization] Starting feature generation from existing app_spec.txt...\n",
   });
 
   await new Promise((resolve) => {

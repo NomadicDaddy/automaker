@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useAppStore, formatShortcut } from "@/store/app-store";
+import { CoursePromoBadge } from "@/components/ui/course-promo-badge";
 import {
   FolderOpen,
   Plus,
@@ -12,7 +13,6 @@ import {
   Bot,
   Folder,
   X,
-  Wrench,
   PanelLeft,
   PanelLeftClose,
   ChevronDown,
@@ -210,6 +210,7 @@ export function Sidebar() {
     cycleNextProject,
     clearProjectHistory,
     setProjectTheme,
+    setTheme,
     theme: globalTheme,
   } = useAppStore();
 
@@ -413,14 +414,37 @@ export function Sidebar() {
           return;
         }
 
-        const project = {
-          id: `project-${Date.now()}`,
-          name,
-          path,
-          lastOpened: new Date().toISOString(),
-        };
+        // Check if project already exists (by path) to preserve theme and other settings
+        const existingProject = projects.find((p) => p.path === path);
 
-        addProject(project);
+        let project: Project;
+        if (existingProject) {
+          // Update existing project, preserving theme and other properties
+          project = {
+            ...existingProject,
+            name, // Update name in case it changed
+            lastOpened: new Date().toISOString(),
+          };
+          // Update the project in the store (this will update the existing entry)
+          const updatedProjects = projects.map((p) =>
+            p.id === existingProject.id ? project : p
+          );
+          useAppStore.setState({ projects: updatedProjects });
+        } else {
+          // Create new project - check for trashed project with same path first (preserves theme if deleted/recreated)
+          // Then fall back to current effective theme, then global theme
+          const trashedProject = trashedProjects.find((p) => p.path === path);
+          const effectiveTheme = trashedProject?.theme || currentProject?.theme || globalTheme;
+          project = {
+            id: `project-${Date.now()}`,
+            name,
+            path,
+            lastOpened: new Date().toISOString(),
+            theme: effectiveTheme,
+          };
+          addProject(project);
+        }
+
         setCurrentProject(project);
 
         // Check if app_spec.txt exists
@@ -455,7 +479,7 @@ export function Sidebar() {
         });
       }
     }
-  }, [addProject, setCurrentProject]);
+  }, [projects, trashedProjects, addProject, setCurrentProject, currentProject, globalTheme]);
 
   const handleRestoreProject = useCallback(
     (projectId: string) => {
@@ -556,12 +580,6 @@ export function Sidebar() {
           label: "Context",
           icon: BookOpen,
           shortcut: shortcuts.context,
-        },
-        {
-          id: "tools",
-          label: "Agent Tools",
-          icon: Wrench,
-          shortcut: shortcuts.tools,
         },
         {
           id: "profiles",
@@ -950,6 +968,10 @@ export function Sidebar() {
                         value={currentProject.theme || ""}
                         onValueChange={(value) => {
                           if (currentProject) {
+                            // If selecting an actual theme (not "Use Global"), also update global
+                            if (value !== "") {
+                              setTheme(value as any);
+                            }
                             setProjectTheme(
                               currentProject.id,
                               value === "" ? null : (value as any)
@@ -1122,6 +1144,8 @@ export function Sidebar() {
 
       {/* Bottom Section - Running Agents / Bug Report / Settings */}
       <div className="border-t border-sidebar-border bg-sidebar-accent/10 shrink-0">
+        {/* Course Promo Badge */}
+        <CoursePromoBadge sidebarOpen={sidebarOpen} />
         {/* Running Agents Link */}
         <div className="p-2 pb-0">
           <button

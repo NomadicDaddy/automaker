@@ -21,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAppStore } from "@/store/app-store";
-import { getElectronAPI } from "@/lib/electron";
+import { getElectronAPI, type Project } from "@/lib/electron";
 import { initializeProject } from "@/lib/project-init";
 import {
   FolderOpen,
@@ -40,6 +40,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { WorkspacePickerModal } from "@/components/workspace-picker-modal";
+import { getHttpApiClient } from "@/lib/http-api-client";
 
 export function WelcomeView() {
   const { projects, addProject, setCurrentProject, setCurrentView } =
@@ -57,6 +59,7 @@ export function WelcomeView() {
     projectName: string;
     projectPath: string;
   } | null>(null);
+  const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
 
   /**
    * Kick off project analysis agent to analyze the codebase
@@ -105,14 +108,34 @@ export function WelcomeView() {
           return;
         }
 
-        const project = {
-          id: `project-${Date.now()}`,
-          name,
-          path,
-          lastOpened: new Date().toISOString(),
-        };
+        // Check if project already exists (by path) to preserve theme and other settings
+        const existingProject = projects.find((p) => p.path === path);
 
-        addProject(project);
+        let project: Project;
+        if (existingProject) {
+          // Update existing project, preserving theme and other properties
+          project = {
+            ...existingProject,
+            name, // Update name in case it changed
+            lastOpened: new Date().toISOString(),
+          };
+          // Update the project in the store (this will update the existing entry)
+          const updatedProjects = projects.map((p) =>
+            p.id === existingProject.id ? project : p
+          );
+          // We need to manually update projects since addProject would create a duplicate
+          useAppStore.setState({ projects: updatedProjects });
+        } else {
+          // Create new project
+          project = {
+            id: `project-${Date.now()}`,
+            name,
+            path,
+            lastOpened: new Date().toISOString(),
+          };
+          addProject(project);
+        }
+
         setCurrentProject(project);
 
         // Show initialization dialog if files were created
@@ -148,20 +171,54 @@ export function WelcomeView() {
         setIsOpening(false);
       }
     },
-    [addProject, setCurrentProject, analyzeProject]
+    [projects, addProject, setCurrentProject, analyzeProject]
   );
 
   const handleOpenProject = useCallback(async () => {
-    const api = getElectronAPI();
-    const result = await api.openDirectory();
+    try {
+      // Check if workspace is configured
+      const httpClient = getHttpApiClient();
+      const configResult = await httpClient.workspace.getConfig();
 
-    if (!result.canceled && result.filePaths[0]) {
-      const path = result.filePaths[0];
-      // Extract folder name from path (works on both Windows and Mac/Linux)
-      const name = path.split(/[/\\]/).filter(Boolean).pop() || "Untitled Project";
-      await initializeAndOpenProject(path, name);
+      if (configResult.success && configResult.configured) {
+        // Show workspace picker modal
+        setShowWorkspacePicker(true);
+      } else {
+        // Fall back to current behavior (native dialog or manual input)
+        const api = getElectronAPI();
+        const result = await api.openDirectory();
+
+        if (!result.canceled && result.filePaths[0]) {
+          const path = result.filePaths[0];
+          // Extract folder name from path (works on both Windows and Mac/Linux)
+          const name = path.split(/[/\\]/).filter(Boolean).pop() || "Untitled Project";
+          await initializeAndOpenProject(path, name);
+        }
+      }
+    } catch (error) {
+      console.error("[Welcome] Failed to check workspace config:", error);
+      // Fall back to current behavior on error
+      const api = getElectronAPI();
+      const result = await api.openDirectory();
+
+      if (!result.canceled && result.filePaths[0]) {
+        const path = result.filePaths[0];
+        const name = path.split(/[/\\]/).filter(Boolean).pop() || "Untitled Project";
+        await initializeAndOpenProject(path, name);
+      }
     }
   }, [initializeAndOpenProject]);
+
+  /**
+   * Handle selecting a project from workspace picker
+   */
+  const handleWorkspaceSelect = useCallback(
+    async (path: string, name: string) => {
+      setShowWorkspacePicker(false);
+      await initializeAndOpenProject(path, name);
+    },
+    [initializeAndOpenProject]
+  );
 
   /**
    * Handle clicking on a recent project
@@ -600,6 +657,13 @@ export function WelcomeView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Workspace Picker Modal */}
+      <WorkspacePickerModal
+        open={showWorkspacePicker}
+        onOpenChange={setShowWorkspacePicker}
+        onSelect={handleWorkspaceSelect}
+      />
 
       {/* Loading overlay when opening project */}
       {isOpening && (

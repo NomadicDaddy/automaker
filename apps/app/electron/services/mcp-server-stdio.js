@@ -211,7 +211,16 @@ async function handleToolsCall(params, id) {
     if (status === 'verified' && feature.skipTests === true) {
       finalStatus = 'waiting_approval';
     }
-    
+
+    // IMPORTANT: Prevent agent from moving an in_progress feature back to backlog
+    // When a feature is being worked on, the agent should only be able to mark it as verified
+    // (which may be converted to waiting_approval for skipTests features)
+    // This prevents the agent from incorrectly putting completed work back in the backlog
+    if (feature.status === 'in_progress' && (status === 'backlog' || status === 'todo')) {
+      console.log(`[McpServerStdio] Feature ${featureId} is in_progress - preventing move to ${status}, converting to waiting_approval instead`);
+      finalStatus = 'waiting_approval';
+    }
+
     // Call the update callback via IPC or direct call
     // Since we're in a separate process, we need to use IPC to communicate back
     // For now, we'll call the feature loader directly since it has the update method

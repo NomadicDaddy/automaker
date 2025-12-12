@@ -121,11 +121,26 @@ export function useAutoMode() {
         case "auto_mode_error":
           console.error("[AutoMode Error]", event.error);
           if (event.featureId && event.error) {
+            // Check for authentication errors and provide a more helpful message
+            const isAuthError = event.errorType === "authentication" ||
+                               event.error.includes("Authentication failed") ||
+                               event.error.includes("Invalid API key");
+
+            const errorMessage = isAuthError
+              ? `Authentication failed: Please check your API key in Settings or run 'claude login' in terminal to re-authenticate.`
+              : event.error;
+
             addAutoModeActivity({
               featureId: event.featureId,
               type: "error",
-              message: event.error,
+              message: errorMessage,
+              errorType: isAuthError ? "authentication" : "execution",
             });
+
+            // Remove the task from running since it failed
+            if (eventProjectId) {
+              removeRunningTask(eventProjectId, event.featureId);
+            }
           }
           break;
 

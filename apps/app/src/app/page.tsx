@@ -7,7 +7,6 @@ import { BoardView } from "@/components/views/board-view";
 import { SpecView } from "@/components/views/spec-view";
 import { AgentView } from "@/components/views/agent-view";
 import { SettingsView } from "@/components/views/settings-view";
-import { AgentToolsView } from "@/components/views/agent-tools-view";
 import { InterviewView } from "@/components/views/interview-view";
 import { ContextView } from "@/components/views/context-view";
 import { ProfilesView } from "@/components/views/profiles-view";
@@ -16,12 +15,20 @@ import { RunningAgentsView } from "@/components/views/running-agents-view";
 import { useAppStore } from "@/store/app-store";
 import { useSetupStore } from "@/store/setup-store";
 import { getElectronAPI, isElectron } from "@/lib/electron";
+import { FileBrowserProvider, useFileBrowser, setGlobalFileBrowser } from "@/contexts/file-browser-context";
 
-export default function Home() {
-  const { currentView, setCurrentView, setIpcConnected, theme, currentProject } = useAppStore();
+function HomeContent() {
+  const {
+    currentView,
+    setCurrentView,
+    setIpcConnected,
+    theme,
+    currentProject,
+  } = useAppStore();
   const { isFirstRun, setupComplete } = useSetupStore();
   const [isMounted, setIsMounted] = useState(false);
   const [streamerPanelOpen, setStreamerPanelOpen] = useState(false);
+  const { openFileBrowser } = useFileBrowser();
 
   // Hidden streamer panel - opens with "\" key
   const handleStreamerPanelShortcut = useCallback((event: KeyboardEvent) => {
@@ -29,7 +36,11 @@ export default function Home() {
     const activeElement = document.activeElement;
     if (activeElement) {
       const tagName = activeElement.tagName.toLowerCase();
-      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select"
+      ) {
         return;
       }
       if (activeElement.getAttribute("contenteditable") === "true") {
@@ -70,6 +81,11 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
+  // Initialize global file browser for HttpApiClient
+  useEffect(() => {
+    setGlobalFileBrowser(openFileBrowser);
+  }, [openFileBrowser]);
+
   // Check if this is first run and redirect to setup if needed
   useEffect(() => {
     console.log("[Setup Flow] Checking setup state:", {
@@ -81,7 +97,9 @@ export default function Home() {
     });
 
     if (isMounted && isFirstRun && !setupComplete) {
-      console.log("[Setup Flow] Redirecting to setup wizard (first run, not complete)");
+      console.log(
+        "[Setup Flow] Redirecting to setup wizard (first run, not complete)"
+      );
       setCurrentView("setup");
     } else if (isMounted && setupComplete) {
       console.log("[Setup Flow] Setup already complete, showing normal view");
@@ -94,7 +112,7 @@ export default function Home() {
       try {
         const api = getElectronAPI();
         const result = await api.ping();
-        setIpcConnected(result === "pong" || result === "pong (mock)");
+        setIpcConnected(result === "pong");
       } catch (error) {
         console.error("IPC connection failed:", error);
         setIpcConnected(false);
@@ -171,8 +189,6 @@ export default function Home() {
         return <AgentView />;
       case "settings":
         return <SettingsView />;
-      case "tools":
-        return <AgentToolsView />;
       case "interview":
         return <InterviewView />;
       case "context":
@@ -193,8 +209,8 @@ export default function Home() {
         <SetupView />
         {/* Environment indicator */}
         {isMounted && !isElectron() && (
-          <div className="fixed bottom-4 right-4 px-3 py-1.5 bg-yellow-500/10 text-yellow-500 text-xs rounded-full border border-yellow-500/20 pointer-events-none">
-            Web Mode (Mock IPC)
+          <div className="fixed bottom-4 right-4 px-3 py-1.5 bg-blue-500/10 text-blue-500 text-xs rounded-full border border-blue-500/20 pointer-events-none">
+            Web Mode
           </div>
         )}
       </main>
@@ -204,23 +220,34 @@ export default function Home() {
   return (
     <main className="flex h-screen overflow-hidden" data-testid="app-container">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300" style={{ marginRight: streamerPanelOpen ? '250px' : '0' }}>
+      <div
+        className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+        style={{ marginRight: streamerPanelOpen ? "250px" : "0" }}
+      >
         {renderView()}
       </div>
 
       {/* Environment indicator - only show after mount to prevent hydration issues */}
       {isMounted && !isElectron() && (
-        <div className="fixed bottom-4 right-4 px-3 py-1.5 bg-yellow-500/10 text-yellow-500 text-xs rounded-full border border-yellow-500/20 pointer-events-none">
-          Web Mode (Mock IPC)
+        <div className="fixed bottom-4 right-4 px-3 py-1.5 bg-blue-500/10 text-blue-500 text-xs rounded-full border border-blue-500/20 pointer-events-none">
+          Web Mode
         </div>
       )}
 
       {/* Hidden streamer panel - opens with "\" key, pushes content */}
       <div
         className={`fixed top-0 right-0 h-full w-[250px] bg-background border-l border-border transition-transform duration-300 ${
-          streamerPanelOpen ? 'translate-x-0' : 'translate-x-full'
+          streamerPanelOpen ? "translate-x-0" : "translate-x-full"
         }`}
       />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <FileBrowserProvider>
+      <HomeContent />
+    </FileBrowserProvider>
   );
 }
