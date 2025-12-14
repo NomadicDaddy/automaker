@@ -200,7 +200,7 @@ export function WikiView() {
               {
                 icon: Cpu,
                 title: "Multi-Model Support",
-                description: "Claude Haiku/Sonnet/Opus + OpenAI Codex models. Choose the right model for each task.",
+                description: "Claude Haiku/Sonnet/Opus models. Choose the right model for each task.",
               },
               {
                 icon: Brain,

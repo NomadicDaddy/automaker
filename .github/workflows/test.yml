@@ -1,0 +1,53 @@
+name: Test Suite
+
+on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        # Use npm install instead of npm ci to correctly resolve platform-specific
+        # optional dependencies (e.g., @tailwindcss/oxide, lightningcss binaries)
+        run: npm install
+
+      - name: Install Linux native bindings
+        # Workaround for npm optional dependencies bug (npm/cli#4828)
+        # Explicitly install Linux bindings needed for build tools
+        run: |
+          npm install --no-save --force \
+            @rollup/rollup-linux-x64-gnu@4.53.3 \
+            @tailwindcss/oxide-linux-x64-gnu@4.1.17
+
+      - name: Run server tests with coverage
+        run: npm run test:server:coverage
+        env:
+          NODE_ENV: test
+
+      # - name: Upload coverage reports
+      #   uses: codecov/codecov-action@v4
+      #   if: always()
+      #   with:
+      #     files: ./apps/server/coverage/coverage-final.json
+      #     flags: server
+      #     name: server-coverage
+      #   env:
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -41,6 +41,7 @@ import {
   GripVertical,
   Lock,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -88,13 +89,6 @@ const CLAUDE_MODELS: { id: AgentModel; label: string }[] = [
   { id: "opus", label: "Claude Opus" },
 ];
 
-const CODEX_MODELS: { id: AgentModel; label: string }[] = [
-  { id: "gpt-5.1-codex-max", label: "GPT-5.1 Codex Max" },
-  { id: "gpt-5.1-codex", label: "GPT-5.1 Codex" },
-  { id: "gpt-5.1-codex-mini", label: "GPT-5.1 Codex Mini" },
-  { id: "gpt-5.1", label: "GPT-5.1" },
-];
-
 const THINKING_LEVELS: { id: ThinkingLevel; label: string }[] = [
   { id: "none", label: "None" },
   { id: "low", label: "Low" },
@@ -105,9 +99,6 @@ const THINKING_LEVELS: { id: ThinkingLevel; label: string }[] = [
 
 // Helper to determine provider from model
 function getProviderFromModel(model: AgentModel): ModelProvider {
-  if (model.startsWith("gpt")) {
-    return "codex";
-  }
   return "claude";
 }
 
@@ -137,7 +128,6 @@ function SortableProfileCard({
   };
 
   const IconComponent = profile.icon ? PROFILE_ICONS[profile.icon] : Brain;
-  const isCodex = profile.provider === "codex";
 
   return (
     <div
@@ -165,18 +155,10 @@ function SortableProfileCard({
 
       {/* Icon */}
       <div
-        className={cn(
-          "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-          isCodex ? "bg-emerald-500/10" : "bg-primary/10"
-        )}
+        className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-primary/10"
       >
         {IconComponent && (
-          <IconComponent
-            className={cn(
-              "w-5 h-5",
-              isCodex ? "text-emerald-500" : "text-primary"
-            )}
-          />
+          <IconComponent className="w-5 h-5 text-primary" />
         )}
       </div>
 
@@ -196,12 +178,7 @@ function SortableProfileCard({
         </p>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
           <span
-            className={cn(
-              "text-xs px-2 py-0.5 rounded-full border",
-              isCodex
-                ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
-                : "border-primary/30 text-primary bg-primary/10"
-            )}
+            className="text-xs px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10"
           >
             {profile.model}
           </span>
@@ -266,12 +243,9 @@ function ProfileForm({
   const supportsThinking = modelSupportsThinking(formData.model);
 
   const handleModelChange = (model: AgentModel) => {
-    const newProvider = getProviderFromModel(model);
     setFormData({
       ...formData,
       model,
-      // Reset thinking level when switching to Codex (doesn't support thinking)
-      thinkingLevel: newProvider === "codex" ? "none" : formData.thinkingLevel,
     });
   };
 
@@ -344,11 +318,11 @@ function ProfileForm({
         </div>
       </div>
 
-      {/* Model Selection - Claude */}
+      {/* Model Selection */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
-          Claude Models
+          Model
         </Label>
         <div className="flex gap-2 flex-wrap">
           {CLAUDE_MODELS.map(({ id, label }) => (
@@ -370,33 +344,7 @@ function ProfileForm({
         </div>
       </div>
 
-      {/* Model Selection - Codex */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-emerald-500" />
-          Codex Models
-        </Label>
-        <div className="flex gap-2 flex-wrap">
-          {CODEX_MODELS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => handleModelChange(id)}
-              className={cn(
-                "flex-1 min-w-[100px] px-3 py-2 rounded-md border text-sm font-medium transition-colors",
-                formData.model === id
-                  ? "bg-emerald-600 text-white border-emerald-500"
-                  : "bg-background hover:bg-accent border-input"
-              )}
-              data-testid={`model-select-${id}`}
-            >
-              {label.replace("GPT-5.1 ", "").replace("Codex ", "")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Thinking Level - Only for Claude models */}
+      {/* Thinking Level */}
       {supportsThinking && (
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
@@ -461,6 +409,7 @@ export function ProfilesView() {
     updateAIProfile,
     removeAIProfile,
     reorderAIProfiles,
+    resetAIProfiles,
   } = useAppStore();
   const shortcuts = useKeyboardShortcutsConfig();
 
@@ -529,6 +478,13 @@ export function ProfilesView() {
     });
   };
 
+  const handleResetProfiles = () => {
+    resetAIProfiles();
+    toast.success("Profiles refreshed", {
+      description: "Default profiles have been updated to the latest version",
+    });
+  };
+
   // Build keyboard shortcuts for profiles view
   const profilesShortcuts: KeyboardShortcut[] = useMemo(() => {
     const shortcutsList: KeyboardShortcut[] = [];
@@ -568,15 +524,26 @@ export function ProfilesView() {
                 </p>
               </div>
             </div>
-            <HotkeyButton
-              onClick={() => setShowAddDialog(true)}
-              hotkey={shortcuts.addProfile}
-              hotkeyActive={false}
-              data-testid="add-profile-button"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Profile
-            </HotkeyButton>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleResetProfiles}
+                data-testid="refresh-profiles-button"
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh Defaults
+              </Button>
+              <HotkeyButton
+                onClick={() => setShowAddDialog(true)}
+                hotkey={shortcuts.addProfile}
+                hotkeyActive={false}
+                data-testid="add-profile-button"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Profile
+              </HotkeyButton>
+            </div>
           </div>
         </div>
       </div>

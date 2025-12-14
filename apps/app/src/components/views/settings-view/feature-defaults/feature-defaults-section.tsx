@@ -59,7 +59,7 @@ export function FeatureDefaultsSection({
               <p className="text-xs text-muted-foreground">
                 When enabled, the Add Feature dialog will show only AI profiles
                 and hide advanced model tweaking options (Claude SDK, thinking
-                levels, and OpenAI Codex CLI). This creates a cleaner, less
+                levels). This creates a cleaner, less
                 overwhelming UI. You can always disable this to access advanced
                 settings.
               </p>

@@ -4,7 +4,7 @@ import { getElectronAPI } from "@/lib/electron";
 type AuthState = "idle" | "running" | "success" | "error" | "manual";
 
 interface UseOAuthAuthenticationOptions {
-  cliType: "claude" | "codex";
+  cliType: "claude";
   enabled?: boolean;
 }
 
@@ -70,11 +70,8 @@ export function useOAuthAuthentication({
     }
 
     try {
-      // Call the appropriate auth API based on cliType
-      const result =
-        cliType === "claude"
-          ? await api.setup.authClaude()
-          : await api.setup.authCodex?.();
+      // Call the auth API
+      const result = await api.setup.authClaude();
 
       // Cleanup subscription
       if (unsubscribeRef.current) {

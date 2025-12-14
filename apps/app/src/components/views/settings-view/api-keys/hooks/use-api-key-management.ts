@@ -10,7 +10,6 @@ interface TestResult {
 
 interface ApiKeyStatus {
   hasAnthropicKey: boolean;
-  hasOpenAIKey: boolean;
   hasGoogleKey: boolean;
 }
 
@@ -24,22 +23,16 @@ export function useApiKeyManagement() {
   // API key values
   const [anthropicKey, setAnthropicKey] = useState(apiKeys.anthropic);
   const [googleKey, setGoogleKey] = useState(apiKeys.google);
-  const [openaiKey, setOpenaiKey] = useState(apiKeys.openai);
 
   // Visibility toggles
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
-  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
 
   // Test connection states
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [testingGeminiConnection, setTestingGeminiConnection] = useState(false);
   const [geminiTestResult, setGeminiTestResult] = useState<TestResult | null>(
-    null
-  );
-  const [testingOpenaiConnection, setTestingOpenaiConnection] = useState(false);
-  const [openaiTestResult, setOpenaiTestResult] = useState<TestResult | null>(
     null
   );
 
@@ -53,7 +46,6 @@ export function useApiKeyManagement() {
   useEffect(() => {
     setAnthropicKey(apiKeys.anthropic);
     setGoogleKey(apiKeys.google);
-    setOpenaiKey(apiKeys.openai);
   }, [apiKeys]);
 
   // Check API key status from environment on mount
@@ -66,7 +58,6 @@ export function useApiKeyManagement() {
           if (status.success) {
             setApiKeyStatus({
               hasAnthropicKey: status.hasAnthropicKey,
-              hasOpenAIKey: status.hasOpenAIKey,
               hasGoogleKey: status.hasGoogleKey,
             });
           }
@@ -152,68 +143,11 @@ export function useApiKeyManagement() {
     }
   };
 
-  // Test OpenAI connection
-  const handleTestOpenaiConnection = async () => {
-    setTestingOpenaiConnection(true);
-    setOpenaiTestResult(null);
-
-    try {
-      const api = getElectronAPI();
-      if (api?.testOpenAIConnection) {
-        const result = await api.testOpenAIConnection(openaiKey);
-        if (result.success) {
-          setOpenaiTestResult({
-            success: true,
-            message:
-              result.message || "Connection successful! OpenAI API responded.",
-          });
-        } else {
-          setOpenaiTestResult({
-            success: false,
-            message: result.error || "Failed to connect to OpenAI API.",
-          });
-        }
-      } else {
-        // Fallback to web API test
-        const response = await fetch("/api/openai/test", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ apiKey: openaiKey }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          setOpenaiTestResult({
-            success: true,
-            message:
-              data.message || "Connection successful! OpenAI API responded.",
-          });
-        } else {
-          setOpenaiTestResult({
-            success: false,
-            message: data.error || "Failed to connect to OpenAI API.",
-          });
-        }
-      }
-    } catch {
-      setOpenaiTestResult({
-        success: false,
-        message: "Network error. Please check your connection.",
-      });
-    } finally {
-      setTestingOpenaiConnection(false);
-    }
-  };
-
   // Save API keys
   const handleSave = () => {
     setApiKeys({
       anthropic: anthropicKey,
       google: googleKey,
-      openai: openaiKey,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -239,15 +173,6 @@ export function useApiKeyManagement() {
       testing: testingGeminiConnection,
       onTest: handleTestGeminiConnection,
       result: geminiTestResult,
-    },
-    openai: {
-      value: openaiKey,
-      setValue: setOpenaiKey,
-      show: showOpenaiKey,
-      setShow: setShowOpenaiKey,
-      testing: testingOpenaiConnection,
-      onTest: handleTestOpenaiConnection,
-      result: openaiTestResult,
     },
   };
 

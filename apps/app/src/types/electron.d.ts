@@ -471,24 +471,6 @@ export interface ElectronAPI {
     error?: string;
   }>;
 
-  // Codex CLI Detection API
-  checkCodexCli: () => Promise<{
-    success: boolean;
-    status?: string;
-    method?: string;
-    version?: string;
-    path?: string;
-    hasApiKey?: boolean;
-    recommendation?: string;
-    installCommands?: {
-      macos?: string;
-      windows?: string;
-      linux?: string;
-      npm?: string;
-    };
-    error?: string;
-  }>;
-
   // Model Management APIs
   model: {
     // Get all available models from all providers
@@ -641,7 +623,7 @@ export interface ModelDefinition {
   id: string;
   name: string;
   modelString: string;
-  provider: "claude" | "codex";
+  provider: "claude";
   description?: string;
   tier?: "basic" | "standard" | "premium";
   default?: boolean;

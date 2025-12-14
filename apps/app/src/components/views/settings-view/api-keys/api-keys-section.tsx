@@ -10,7 +10,7 @@ import { useApiKeyManagement } from "./hooks/use-api-key-management";
 
 export function ApiKeysSection() {
   const { apiKeys } = useAppStore();
-  const { claudeAuthStatus, codexAuthStatus } = useSetupStore();
+  const { claudeAuthStatus } = useSetupStore();
 
   const { providerConfigParams, apiKeyStatus, handleSave, saved } =
     useApiKeyManagement();
@@ -41,7 +41,6 @@ export function ApiKeysSection() {
         {/* Authentication Status Display */}
         <AuthenticationStatusDisplay
           claudeAuthStatus={claudeAuthStatus}
-          codexAuthStatus={codexAuthStatus}
           apiKeyStatus={apiKeyStatus}
           apiKeys={apiKeys}
         />

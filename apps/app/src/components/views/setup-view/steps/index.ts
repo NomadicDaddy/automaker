@@ -2,4 +2,3 @@
 export { WelcomeStep } from "./welcome-step";
 export { CompleteStep } from "./complete-step";
 export { ClaudeSetupStep } from "./claude-setup-step";
-export { CodexSetupStep } from "./codex-setup-step";

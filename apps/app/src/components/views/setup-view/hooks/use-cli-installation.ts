@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 
 interface UseCliInstallationOptions {
-  cliType: "claude" | "codex";
+  cliType: "claude";
   installApi: () => Promise<any>;
   onProgressEvent?: (callback: (progress: any) => void) => (() => void) | undefined;
   onSuccess?: () => void;

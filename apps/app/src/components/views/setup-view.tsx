@@ -7,7 +7,6 @@ import {
   WelcomeStep,
   CompleteStep,
   ClaudeSetupStep,
-  CodexSetupStep,
 } from "./setup-view/steps";
 
 // Main Setup View
@@ -17,17 +16,14 @@ export function SetupView() {
     setCurrentStep,
     completeSetup,
     setSkipClaudeSetup,
-    setSkipCodexSetup,
   } = useSetupStore();
   const { setCurrentView } = useAppStore();
 
-  const steps = ["welcome", "claude", "codex", "complete"] as const;
+  const steps = ["welcome", "claude", "complete"] as const;
   type StepName = (typeof steps)[number];
   const getStepName = (): StepName => {
     if (currentStep === "claude_detect" || currentStep === "claude_auth")
       return "claude";
-    if (currentStep === "codex_detect" || currentStep === "codex_auth")
-      return "codex";
     if (currentStep === "welcome") return "welcome";
     return "complete";
   };
@@ -46,10 +42,6 @@ export function SetupView() {
         setCurrentStep("claude_detect");
         break;
       case "claude":
-        console.log("[Setup Flow] Moving to codex_detect step");
-        setCurrentStep("codex_detect");
-        break;
-      case "codex":
         console.log("[Setup Flow] Moving to complete step");
         setCurrentStep("complete");
         break;
@@ -62,21 +54,12 @@ export function SetupView() {
       case "claude":
         setCurrentStep("welcome");
         break;
-      case "codex":
-        setCurrentStep("claude_detect");
-        break;
     }
   };
 
   const handleSkipClaude = () => {
     console.log("[Setup Flow] Skipping Claude setup");
     setSkipClaudeSetup(true);
-    setCurrentStep("codex_detect");
-  };
-
-  const handleSkipCodex = () => {
-    console.log("[Setup Flow] Skipping Codex setup");
-    setSkipCodexSetup(true);
     setCurrentStep("complete");
   };
 
@@ -124,15 +107,6 @@ export function SetupView() {
                   onNext={() => handleNext("claude")}
                   onBack={() => handleBack("claude")}
                   onSkip={handleSkipClaude}
-                />
-              )}
-
-              {(currentStep === "codex_detect" ||
-                currentStep === "codex_auth") && (
-                <CodexSetupStep
-                  onNext={() => handleNext("codex")}
-                  onBack={() => handleBack("codex")}
-                  onSkip={handleSkipCodex}
                 />
               )}
 

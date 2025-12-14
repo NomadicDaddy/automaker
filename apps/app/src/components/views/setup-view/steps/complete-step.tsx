@@ -14,16 +14,13 @@ interface CompleteStepProps {
 }
 
 export function CompleteStep({ onFinish }: CompleteStepProps) {
-  const { claudeCliStatus, claudeAuthStatus, codexCliStatus, codexAuthStatus } =
+  const { claudeCliStatus, claudeAuthStatus } =
     useSetupStore();
   const { apiKeys } = useAppStore();
 
   const claudeReady =
     (claudeCliStatus?.installed && claudeAuthStatus?.authenticated) ||
     apiKeys.anthropic;
-  const codexReady =
-    (codexCliStatus?.installed && codexAuthStatus?.authenticated) ||
-    apiKeys.openai;
 
   return (
     <div className="text-center space-y-6">
@@ -41,7 +38,7 @@ export function CompleteStep({ onFinish }: CompleteStepProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+      <div className="max-w-md mx-auto">
         <Card
           className={`bg-card/50 border ${
             claudeReady ? "border-green-500/50" : "border-yellow-500/50"
@@ -58,28 +55,6 @@ export function CompleteStep({ onFinish }: CompleteStepProps) {
                 <p className="font-medium text-foreground">Claude</p>
                 <p className="text-sm text-muted-foreground">
                   {claudeReady ? "Ready to use" : "Configure later in settings"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`bg-card/50 border ${
-            codexReady ? "border-green-500/50" : "border-yellow-500/50"
-          }`}
-        >
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              {codexReady ? (
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              ) : (
-                <AlertCircle className="w-6 h-6 text-yellow-500" />
-              )}
-              <div className="text-left">
-                <p className="font-medium text-foreground">Codex</p>
-                <p className="text-sm text-muted-foreground">
-                  {codexReady ? "Ready to use" : "Configure later in settings"}
                 </p>
               </div>
             </div>

@@ -371,25 +371,6 @@ export class HttpApiClient implements ElectronAPI {
     return this.get("/api/setup/claude-status");
   }
 
-  async checkCodexCli(): Promise<{
-    success: boolean;
-    status?: string;
-    method?: string;
-    version?: string;
-    path?: string;
-    hasApiKey?: boolean;
-    recommendation?: string;
-    installCommands?: {
-      macos?: string;
-      windows?: string;
-      linux?: string;
-      npm?: string;
-    };
-    error?: string;
-  }> {
-    return this.get("/api/setup/codex-status");
-  }
-
   // Model API
   model = {
     getAvailable: async (): Promise<{
@@ -407,14 +388,6 @@ export class HttpApiClient implements ElectronAPI {
       return this.get("/api/models/providers");
     },
   };
-
-  async testOpenAIConnection(apiKey?: string): Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-  }> {
-    return this.post("/api/setup/test-openai", { apiKey });
-  }
 
   // Setup API
   setup = {
@@ -440,34 +413,11 @@ export class HttpApiClient implements ElectronAPI {
       error?: string;
     }> => this.get("/api/setup/claude-status"),
 
-    getCodexStatus: (): Promise<{
-      success: boolean;
-      status?: string;
-      method?: string;
-      version?: string;
-      path?: string;
-      auth?: {
-        authenticated: boolean;
-        method: string;
-        hasAuthFile: boolean;
-        hasEnvKey: boolean;
-        hasStoredApiKey?: boolean;
-        hasEnvApiKey?: boolean;
-      };
-      error?: string;
-    }> => this.get("/api/setup/codex-status"),
-
     installClaude: (): Promise<{
       success: boolean;
       message?: string;
       error?: string;
     }> => this.post("/api/setup/install-claude"),
-
-    installCodex: (): Promise<{
-      success: boolean;
-      message?: string;
-      error?: string;
-    }> => this.post("/api/setup/install-codex"),
 
     authClaude: (): Promise<{
       success: boolean;
@@ -480,15 +430,6 @@ export class HttpApiClient implements ElectronAPI {
       output?: string;
     }> => this.post("/api/setup/auth-claude"),
 
-    authCodex: (
-      apiKey?: string
-    ): Promise<{
-      success: boolean;
-      requiresManualAuth?: boolean;
-      command?: string;
-      error?: string;
-    }> => this.post("/api/setup/auth-codex", { apiKey }),
-
     storeApiKey: (
       provider: string,
       apiKey: string
@@ -500,17 +441,8 @@ export class HttpApiClient implements ElectronAPI {
     getApiKeys: (): Promise<{
       success: boolean;
       hasAnthropicKey: boolean;
-      hasOpenAIKey: boolean;
       hasGoogleKey: boolean;
     }> => this.get("/api/setup/api-keys"),
-
-    configureCodexMcp: (
-      projectPath: string
-    ): Promise<{
-      success: boolean;
-      configPath?: string;
-      error?: string;
-    }> => this.post("/api/setup/configure-codex-mcp", { projectPath }),
 
     getPlatform: (): Promise<{
       success: boolean;

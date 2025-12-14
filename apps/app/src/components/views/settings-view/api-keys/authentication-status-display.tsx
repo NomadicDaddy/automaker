@@ -4,29 +4,24 @@ import {
   AlertCircle,
   Info,
   Terminal,
-  Atom,
   Sparkles,
 } from "lucide-react";
-import type { ClaudeAuthStatus, CodexAuthStatus } from "@/store/setup-store";
+import type { ClaudeAuthStatus } from "@/store/setup-store";
 
 interface AuthenticationStatusDisplayProps {
   claudeAuthStatus: ClaudeAuthStatus | null;
-  codexAuthStatus: CodexAuthStatus | null;
   apiKeyStatus: {
     hasAnthropicKey: boolean;
-    hasOpenAIKey: boolean;
     hasGoogleKey: boolean;
   } | null;
   apiKeys: {
     anthropic: string;
     google: string;
-    openai: string;
   };
 }
 
 export function AuthenticationStatusDisplay({
   claudeAuthStatus,
-  codexAuthStatus,
   apiKeyStatus,
   apiKeys,
 }: AuthenticationStatusDisplayProps) {
@@ -80,56 +75,6 @@ export function AuthenticationStatusDisplay({
                 <span>Using environment variable (ANTHROPIC_API_KEY)</span>
               </div>
             ) : apiKeys.anthropic ? (
-              <div className="flex items-center gap-2 text-blue-400">
-                <Info className="w-3 h-3 shrink-0" />
-                <span>Using manual API key from settings</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-yellow-500 py-0.5">
-                <AlertCircle className="w-3 h-3 shrink-0" />
-                <span className="text-xs">Not configured</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Codex/OpenAI Authentication Status */}
-        <div className="p-3 rounded-lg bg-card border border-border">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Atom className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-foreground">
-              Codex (OpenAI)
-            </span>
-          </div>
-          <div className="space-y-1.5 text-xs min-h-12">
-            {codexAuthStatus?.authenticated ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
-                  <span className="text-green-400 font-medium">Authenticated</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Info className="w-3 h-3 shrink-0" />
-                  <span>
-                    {codexAuthStatus.method === "subscription"
-                      ? "Using Codex subscription (Plus/Team)"
-                      : codexAuthStatus.method === "cli_verified" ||
-                        codexAuthStatus.method === "cli_tokens"
-                      ? "Using CLI login (OpenAI account)"
-                      : codexAuthStatus.method === "api_key"
-                      ? "Using stored API key"
-                      : codexAuthStatus.method === "env"
-                      ? "Using OPENAI_API_KEY"
-                      : `Using ${codexAuthStatus.method || "unknown"} authentication`}
-                  </span>
-                </div>
-              </>
-            ) : apiKeyStatus?.hasOpenAIKey ? (
-              <div className="flex items-center gap-2 text-blue-400">
-                <Info className="w-3 h-3 shrink-0" />
-                <span>Using environment variable (OPENAI_API_KEY)</span>
-              </div>
-            ) : apiKeys.openai ? (
               <div className="flex items-center gap-2 text-blue-400">
                 <Info className="w-3 h-3 shrink-0" />
                 <span>Using manual API key from settings</span>

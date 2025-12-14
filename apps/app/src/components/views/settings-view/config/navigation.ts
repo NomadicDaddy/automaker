@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   Key,
   Terminal,
-  Atom,
   Palette,
   LayoutGrid,
   Settings2,
@@ -20,7 +19,6 @@ export interface NavigationItem {
 export const NAV_ITEMS: NavigationItem[] = [
   { id: "api-keys", label: "API Keys", icon: Key },
   { id: "claude", label: "Claude", icon: Terminal },
-  { id: "codex", label: "Codex", icon: Atom },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "kanban", label: "Kanban Display", icon: LayoutGrid },
   { id: "keyboard", label: "Keyboard Shortcuts", icon: Settings2 },

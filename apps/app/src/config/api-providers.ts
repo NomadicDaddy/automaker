@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { LucideIcon } from "lucide-react";
 import type { ApiKeys } from "@/store/app-store";
 
-export type ProviderKey = "anthropic" | "google" | "openai";
+export type ProviderKey = "anthropic" | "google";
 
 export interface ProviderConfig {
   key: ProviderKey;
@@ -51,22 +51,12 @@ export interface ProviderConfigParams {
     onTest: () => Promise<void>;
     result: { success: boolean; message: string } | null;
   };
-  openai: {
-    value: string;
-    setValue: Dispatch<SetStateAction<string>>;
-    show: boolean;
-    setShow: Dispatch<SetStateAction<boolean>>;
-    testing: boolean;
-    onTest: () => Promise<void>;
-    result: { success: boolean; message: string } | null;
-  };
 }
 
 export const buildProviderConfigs = ({
   apiKeys,
   anthropic,
   google,
-  openai,
 }: ProviderConfigParams): ProviderConfig[] => [
   {
     key: "anthropic",
@@ -120,30 +110,5 @@ export const buildProviderConfigs = ({
       "Used for Gemini AI features (including image/design prompts). Get your key at",
     descriptionLinkHref: "https://makersuite.google.com/app/apikey",
     descriptionLinkText: "makersuite.google.com",
-  },
-  {
-    key: "openai",
-    label: "OpenAI API Key (Codex/GPT)",
-    inputId: "openai-key",
-    placeholder: "sk-...",
-    value: openai.value,
-    setValue: openai.setValue,
-    showValue: openai.show,
-    setShowValue: openai.setShow,
-    hasStoredKey: apiKeys.openai,
-    inputTestId: "openai-api-key-input",
-    toggleTestId: "toggle-openai-visibility",
-    testButton: {
-      onClick: openai.onTest,
-      disabled: !openai.value || openai.testing,
-      loading: openai.testing,
-      testId: "test-openai-connection",
-    },
-    result: openai.result,
-    resultTestId: "openai-test-connection-result",
-    resultMessageTestId: "openai-test-connection-message",
-    descriptionPrefix: "Used for OpenAI Codex CLI and GPT models. Get your key at",
-    descriptionLinkHref: "https://platform.openai.com/api-keys",
-    descriptionLinkText: "platform.openai.com",
   },
 ];

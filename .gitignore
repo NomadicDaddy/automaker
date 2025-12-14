@@ -11,3 +11,5 @@ dist/
 .automaker/
 /.automaker/*
 /.automaker/
+
+/old

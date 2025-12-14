@@ -7,7 +7,6 @@ import {
   Key,
   Palette,
   Terminal,
-  Atom,
   FlaskConical,
   Trash2,
   Settings2,
@@ -24,7 +23,6 @@ import { DeleteProjectDialog } from "./settings-view/components/delete-project-d
 import { SettingsNavigation } from "./settings-view/components/settings-navigation";
 import { ApiKeysSection } from "./settings-view/api-keys/api-keys-section";
 import { ClaudeCliStatus } from "./settings-view/cli-status/claude-cli-status";
-import { CodexCliStatus } from "./settings-view/cli-status/codex-cli-status";
 import { AppearanceSection } from "./settings-view/appearance/appearance-section";
 import { KeyboardShortcutsSection } from "./settings-view/keyboard-shortcuts/keyboard-shortcuts-section";
 import { FeatureDefaultsSection } from "./settings-view/feature-defaults/feature-defaults-section";
@@ -39,7 +37,6 @@ import type { Project as ElectronProject } from "@/lib/electron";
 const NAV_ITEMS = [
   { id: "api-keys", label: "API Keys", icon: Key },
   { id: "claude", label: "Claude", icon: Terminal },
-  { id: "codex", label: "Codex", icon: Atom },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "audio", label: "Audio", icon: Volume2 },
   { id: "keyboard", label: "Keyboard Shortcuts", icon: Settings2 },
@@ -96,11 +93,8 @@ export function SettingsView() {
   // Use CLI status hook
   const {
     claudeCliStatus,
-    codexCliStatus,
     isCheckingClaudeCli,
-    isCheckingCodexCli,
     handleRefreshClaudeCli,
-    handleRefreshCodexCli,
   } = useCliStatus();
 
   // Use scroll tracking hook
@@ -144,15 +138,6 @@ export function SettingsView() {
                 status={claudeCliStatus}
                 isChecking={isCheckingClaudeCli}
                 onRefresh={handleRefreshClaudeCli}
-              />
-            )}
-
-            {/* Codex CLI Status Section */}
-            {codexCliStatus && (
-              <CodexCliStatus
-                status={codexCliStatus}
-                isChecking={isCheckingCodexCli}
-                onRefresh={handleRefreshCodexCli}
               />
             )}
 

@@ -29,5 +29,13 @@ jobs:
         # optional dependencies (e.g., @tailwindcss/oxide, lightningcss binaries)
         run: npm install
 
+      - name: Install Linux native bindings
+        # Workaround for npm optional dependencies bug (npm/cli#4828)
+        # Explicitly install Linux bindings needed for build tools
+        run: |
+          npm install --no-save --force \
+            @rollup/rollup-linux-x64-gnu@4.53.3 \
+            @tailwindcss/oxide-linux-x64-gnu@4.1.17
+
       - name: Run build:electron
         run: npm run build:electron

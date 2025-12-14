@@ -287,22 +287,6 @@ export interface ElectronAPI {
     };
     error?: string;
   }>;
-  checkCodexCli?: () => Promise<{
-    success: boolean;
-    status?: string;
-    method?: string;
-    version?: string;
-    path?: string;
-    hasApiKey?: boolean;
-    recommendation?: string;
-    installCommands?: {
-      macos?: string;
-      windows?: string;
-      linux?: string;
-      npm?: string;
-    };
-    error?: string;
-  }>;
   model?: {
     getAvailable: () => Promise<{
       success: boolean;
@@ -315,11 +299,6 @@ export interface ElectronAPI {
       error?: string;
     }>;
   };
-  testOpenAIConnection?: (apiKey?: string) => Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-  }>;
   worktree?: WorktreeAPI;
   git?: GitAPI;
   suggestions?: SuggestionsAPI;
@@ -347,28 +326,7 @@ export interface ElectronAPI {
       };
       error?: string;
     }>;
-    getCodexStatus: () => Promise<{
-      success: boolean;
-      status?: string;
-      method?: string;
-      version?: string;
-      path?: string;
-      auth?: {
-        authenticated: boolean;
-        method: string; // Can be: "cli_verified", "cli_tokens", "auth_file", "env_var", "none"
-        hasAuthFile: boolean;
-        hasEnvKey: boolean;
-        hasStoredApiKey?: boolean;
-        hasEnvApiKey?: boolean;
-      };
-      error?: string;
-    }>;
     installClaude: () => Promise<{
-      success: boolean;
-      message?: string;
-      error?: string;
-    }>;
-    installCodex: () => Promise<{
       success: boolean;
       message?: string;
       error?: string;
@@ -383,12 +341,6 @@ export interface ElectronAPI {
       message?: string;
       output?: string;
     }>;
-    authCodex: (apiKey?: string) => Promise<{
-      success: boolean;
-      requiresManualAuth?: boolean;
-      command?: string;
-      error?: string;
-    }>;
     storeApiKey: (
       provider: string,
       apiKey: string
@@ -396,12 +348,8 @@ export interface ElectronAPI {
     getApiKeys: () => Promise<{
       success: boolean;
       hasAnthropicKey: boolean;
-      hasOpenAIKey: boolean;
       hasGoogleKey: boolean;
     }>;
-    configureCodexMcp: (
-      projectPath: string
-    ) => Promise<{ success: boolean; configPath?: string; error?: string }>;
     getPlatform: () => Promise<{
       success: boolean;
       platform: string;
@@ -838,21 +786,10 @@ const getMockElectronAPI = (): ElectronAPI => {
       recommendation: "Claude CLI checks are unavailable in the web preview.",
     }),
 
-    checkCodexCli: async () => ({
-      success: false,
-      status: "not_installed",
-      recommendation: "Codex CLI checks are unavailable in the web preview.",
-    }),
-
     model: {
       getAvailable: async () => ({ success: true, models: [] }),
       checkProviders: async () => ({ success: true, providers: {} }),
     },
-
-    testOpenAIConnection: async () => ({
-      success: false,
-      error: "OpenAI connection test is only available in the Electron app.",
-    }),
 
     // Mock Setup API
     setup: createMockSetupAPI(),
@@ -903,28 +840,7 @@ interface SetupAPI {
     };
     error?: string;
   }>;
-  getCodexStatus: () => Promise<{
-    success: boolean;
-    status?: string;
-    method?: string;
-    version?: string;
-    path?: string;
-    auth?: {
-      authenticated: boolean;
-      method: string; // Can be: "cli_verified", "cli_tokens", "auth_file", "env_var", "none"
-      hasAuthFile: boolean;
-      hasEnvKey: boolean;
-      hasStoredApiKey?: boolean;
-      hasEnvApiKey?: boolean;
-    };
-    error?: string;
-  }>;
   installClaude: () => Promise<{
-    success: boolean;
-    message?: string;
-    error?: string;
-  }>;
-  installCodex: () => Promise<{
     success: boolean;
     message?: string;
     error?: string;
@@ -939,12 +855,6 @@ interface SetupAPI {
     message?: string;
     output?: string;
   }>;
-  authCodex: (apiKey?: string) => Promise<{
-    success: boolean;
-    requiresManualAuth?: boolean;
-    command?: string;
-    error?: string;
-  }>;
   storeApiKey: (
     provider: string,
     apiKey: string
@@ -952,12 +862,8 @@ interface SetupAPI {
   getApiKeys: () => Promise<{
     success: boolean;
     hasAnthropicKey: boolean;
-    hasOpenAIKey: boolean;
     hasGoogleKey: boolean;
   }>;
-  configureCodexMcp: (
-    projectPath: string
-  ) => Promise<{ success: boolean; configPath?: string; error?: string }>;
   getPlatform: () => Promise<{
     success: boolean;
     platform: string;
@@ -991,33 +897,9 @@ function createMockSetupAPI(): SetupAPI {
       };
     },
 
-    getCodexStatus: async () => {
-      console.log("[Mock] Getting Codex status");
-      return {
-        success: true,
-        status: "not_installed",
-        auth: {
-          authenticated: false,
-          method: "none",
-          hasAuthFile: false,
-          hasEnvKey: false,
-        },
-      };
-    },
-
     installClaude: async () => {
       console.log("[Mock] Installing Claude CLI");
       // Simulate installation delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return {
-        success: false,
-        error:
-          "CLI installation is only available in the Electron app. Please run the command manually.",
-      };
-    },
-
-    installCodex: async () => {
-      console.log("[Mock] Installing Codex CLI");
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return {
         success: false,
@@ -1035,18 +917,6 @@ function createMockSetupAPI(): SetupAPI {
       };
     },
 
-    authCodex: async (apiKey?: string) => {
-      console.log("[Mock] Auth Codex CLI", { hasApiKey: !!apiKey });
-      if (apiKey) {
-        return { success: true };
-      }
-      return {
-        success: true,
-        requiresManualAuth: true,
-        command: "codex auth login",
-      };
-    },
-
     storeApiKey: async (provider: string, apiKey: string) => {
       console.log("[Mock] Storing API key for:", provider);
       // In mock mode, we just pretend to store it (it's already in the app store)
@@ -1058,16 +928,7 @@ function createMockSetupAPI(): SetupAPI {
       return {
         success: true,
         hasAnthropicKey: false,
-        hasOpenAIKey: false,
         hasGoogleKey: false,
-      };
-    },
-
-    configureCodexMcp: async (projectPath: string) => {
-      console.log("[Mock] Configuring Codex MCP for:", projectPath);
-      return {
-        success: true,
-        configPath: `${projectPath}/.codex/config.toml`,
       };
     },
 

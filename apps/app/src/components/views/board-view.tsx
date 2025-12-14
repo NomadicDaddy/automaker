@@ -121,7 +121,7 @@ type ModelOption = {
   label: string;
   description: string;
   badge?: string;
-  provider: "claude" | "codex";
+  provider: "claude";
 };
 
 const CLAUDE_MODELS: ModelOption[] = [
@@ -145,37 +145,6 @@ const CLAUDE_MODELS: ModelOption[] = [
     description: "Most capable model for complex work.",
     badge: "Premium",
     provider: "claude",
-  },
-];
-
-const CODEX_MODELS: ModelOption[] = [
-  {
-    id: "gpt-5.1-codex-max",
-    label: "GPT-5.1 Codex Max",
-    description: "Flagship Codex model tuned for deep coding tasks.",
-    badge: "Flagship",
-    provider: "codex",
-  },
-  {
-    id: "gpt-5.1-codex",
-    label: "GPT-5.1 Codex",
-    description: "Strong coding performance with lower cost.",
-    badge: "Standard",
-    provider: "codex",
-  },
-  {
-    id: "gpt-5.1-codex-mini",
-    label: "GPT-5.1 Codex Mini",
-    description: "Fastest Codex option for lightweight edits.",
-    badge: "Fast",
-    provider: "codex",
-  },
-  {
-    id: "gpt-5.1",
-    label: "GPT-5.1",
-    description: "General-purpose reasoning with solid coding ability.",
-    badge: "General",
-    provider: "codex",
   },
 ];
 
@@ -1693,12 +1662,8 @@ export function BoardView() {
     <div className="flex gap-2 flex-wrap">
       {options.map((option) => {
         const isSelected = selectedModel === option.id;
-        const isCodex = option.provider === "codex";
         // Shorter display names for compact view
-        const shortName = option.label
-          .replace("Claude ", "")
-          .replace("GPT-5.1 Codex ", "")
-          .replace("GPT-5.1 ", "");
+        const shortName = option.label.replace("Claude ", "");
         return (
           <button
             key={option.id}
@@ -1708,9 +1673,7 @@ export function BoardView() {
             className={cn(
               "flex-1 min-w-[80px] px-3 py-2 rounded-md border text-sm font-medium transition-colors",
               isSelected
-                ? isCodex
-                  ? "bg-emerald-600 text-white border-emerald-500"
-                  : "bg-primary text-primary-foreground border-primary"
+                ? "bg-primary text-primary-foreground border-primary"
                 : "bg-background hover:bg-accent border-input"
             )}
             data-testid={`${testIdPrefix}-${option.id}`}
@@ -2270,7 +2233,6 @@ export function BoardView() {
                       const IconComponent = profile.icon
                         ? PROFILE_ICONS[profile.icon]
                         : Brain;
-                      const isCodex = profile.provider === "codex";
                       const isSelected =
                         newFeature.model === profile.model &&
                         newFeature.thinkingLevel === profile.thinkingLevel;
@@ -2284,13 +2246,6 @@ export function BoardView() {
                               model: profile.model,
                               thinkingLevel: profile.thinkingLevel,
                             });
-                            if (profile.thinkingLevel === "ultrathink") {
-                              toast.warning("Ultrathink Selected", {
-                                description:
-                                  "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task).",
-                                duration: 4000,
-                              });
-                            }
                           }}
                           className={cn(
                             "flex items-center gap-2 p-2 rounded-lg border text-left transition-all",
@@ -2300,19 +2255,9 @@ export function BoardView() {
                           )}
                           data-testid={`profile-quick-select-${profile.id}`}
                         >
-                          <div
-                            className={cn(
-                              "w-7 h-7 rounded flex items-center justify-center flex-shrink-0",
-                              isCodex ? "bg-emerald-500/10" : "bg-primary/10"
-                            )}
-                          >
+                          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 bg-primary/10">
                             {IconComponent && (
-                              <IconComponent
-                                className={cn(
-                                  "w-4 h-4",
-                                  isCodex ? "text-emerald-500" : "text-primary"
-                                )}
-                              />
+                              <IconComponent className="w-4 h-4 text-primary" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -2401,13 +2346,6 @@ export function BoardView() {
                                 ...newFeature,
                                 thinkingLevel: level,
                               });
-                              if (level === "ultrathink") {
-                                toast.warning("Ultrathink Selected", {
-                                  description:
-                                    "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
-                                  duration: 5000,
-                                });
-                              }
                             }}
                             className={cn(
                               "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[60px]",
@@ -2431,36 +2369,6 @@ export function BoardView() {
                       </p>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Separator */}
-              {(!showProfilesOnly || showAdvancedOptions) && (
-                <div className="border-t border-border" />
-              )}
-
-              {/* Codex Models Section - Hidden when showProfilesOnly is true and showAdvancedOptions is false */}
-              {(!showProfilesOnly || showAdvancedOptions) && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-emerald-500" />
-                      OpenAI via Codex CLI
-                    </Label>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-600 dark:text-emerald-300">
-                      CLI
-                    </span>
-                  </div>
-                  {renderModelOptions(CODEX_MODELS, newFeature.model, (model) =>
-                    setNewFeature({
-                      ...newFeature,
-                      model,
-                      thinkingLevel: "none",
-                    })
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Codex models do not support thinking levels.
-                  </p>
                 </div>
               )}
             </TabsContent>
@@ -2688,7 +2596,6 @@ export function BoardView() {
                         const IconComponent = profile.icon
                           ? PROFILE_ICONS[profile.icon]
                           : Brain;
-                        const isCodex = profile.provider === "codex";
                         const isSelected =
                           editingFeature.model === profile.model &&
                           editingFeature.thinkingLevel ===
@@ -2703,13 +2610,6 @@ export function BoardView() {
                                 model: profile.model,
                                 thinkingLevel: profile.thinkingLevel,
                               });
-                              if (profile.thinkingLevel === "ultrathink") {
-                                toast.warning("Ultrathink Selected", {
-                                  description:
-                                    "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task).",
-                                  duration: 4000,
-                                });
-                              }
                             }}
                             className={cn(
                               "flex items-center gap-2 p-2 rounded-lg border text-left transition-all",
@@ -2719,21 +2619,9 @@ export function BoardView() {
                             )}
                             data-testid={`edit-profile-quick-select-${profile.id}`}
                           >
-                            <div
-                              className={cn(
-                                "w-7 h-7 rounded flex items-center justify-center flex-shrink-0",
-                                isCodex ? "bg-emerald-500/10" : "bg-primary/10"
-                              )}
-                            >
+                            <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 bg-primary/10">
                               {IconComponent && (
-                                <IconComponent
-                                  className={cn(
-                                    "w-4 h-4",
-                                    isCodex
-                                      ? "text-emerald-500"
-                                      : "text-primary"
-                                  )}
-                                />
+                                <IconComponent className="w-4 h-4 text-primary" />
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -2813,13 +2701,6 @@ export function BoardView() {
                                   ...editingFeature,
                                   thinkingLevel: level,
                                 });
-                                if (level === "ultrathink") {
-                                  toast.warning("Ultrathink Selected", {
-                                    description:
-                                      "Ultrathink uses extensive reasoning (45-180s, ~$0.48/task). Best for complex architecture, migrations, or debugging.",
-                                    duration: 5000,
-                                  });
-                                }
                               }}
                               className={cn(
                                 "flex-1 px-3 py-2 rounded-md border text-sm font-medium transition-colors min-w-[60px]",
@@ -2844,40 +2725,6 @@ export function BoardView() {
                         </p>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Separator */}
-                {(!showProfilesOnly || showEditAdvancedOptions) && (
-                  <div className="border-t border-border" />
-                )}
-
-                {/* Codex Models Section - Hidden when showProfilesOnly is true and showEditAdvancedOptions is false */}
-                {(!showProfilesOnly || showEditAdvancedOptions) && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-emerald-500" />
-                        OpenAI via Codex CLI
-                      </Label>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-600 dark:text-emerald-300">
-                        CLI
-                      </span>
-                    </div>
-                    {renderModelOptions(
-                      CODEX_MODELS,
-                      (editingFeature.model ?? "opus") as AgentModel,
-                      (model) =>
-                        setEditingFeature({
-                          ...editingFeature,
-                          model,
-                          thinkingLevel: "none",
-                        }),
-                      "edit-model-select"
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Codex models do not support thinking levels.
-                    </p>
                   </div>
                 )}
               </TabsContent>

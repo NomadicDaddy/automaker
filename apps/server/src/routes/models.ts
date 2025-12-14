@@ -3,6 +3,7 @@
  */
 
 import { Router, type Request, type Response } from "express";
+import { ProviderFactory } from "../providers/provider-factory.js";
 
 interface ModelDefinition {
   id: string;
@@ -63,33 +64,6 @@ export function createModelsRoutes(): Router {
           supportsVision: true,
           supportsTools: true,
         },
-        {
-          id: "gpt-4o",
-          name: "GPT-4o",
-          provider: "openai",
-          contextWindow: 128000,
-          maxOutputTokens: 16384,
-          supportsVision: true,
-          supportsTools: true,
-        },
-        {
-          id: "gpt-4o-mini",
-          name: "GPT-4o Mini",
-          provider: "openai",
-          contextWindow: 128000,
-          maxOutputTokens: 16384,
-          supportsVision: true,
-          supportsTools: true,
-        },
-        {
-          id: "o1",
-          name: "o1",
-          provider: "openai",
-          contextWindow: 200000,
-          maxOutputTokens: 100000,
-          supportsVision: true,
-          supportsTools: false,
-        },
       ];
 
       res.json({ success: true, models });
@@ -102,14 +76,13 @@ export function createModelsRoutes(): Router {
   // Check provider status
   router.get("/providers", async (_req: Request, res: Response) => {
     try {
-      const providers: Record<string, ProviderStatus> = {
+      // Get installation status from all providers
+      const statuses = await ProviderFactory.checkAllProviders();
+
+      const providers: Record<string, any> = {
         anthropic: {
-          available: !!process.env.ANTHROPIC_API_KEY,
-          hasApiKey: !!process.env.ANTHROPIC_API_KEY,
-        },
-        openai: {
-          available: !!process.env.OPENAI_API_KEY,
-          hasApiKey: !!process.env.OPENAI_API_KEY,
+          available: statuses.claude?.installed || false,
+          hasApiKey: !!process.env.ANTHROPIC_API_KEY || !!process.env.CLAUDE_CODE_OAUTH_TOKEN,
         },
         google: {
           available: !!process.env.GOOGLE_API_KEY,

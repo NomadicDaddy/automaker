@@ -2437,16 +2437,7 @@ export async function setupFirstRun(page: Page): Promise<void> {
           progress: 0,
           output: [],
         },
-        codexCliStatus: null,
-        codexAuthStatus: null,
-        codexInstallProgress: {
-          isInstalling: false,
-          currentStep: "",
-          progress: 0,
-          output: [],
-        },
         skipClaudeSetup: false,
-        skipCodexSetup: false,
       },
       version: 0,
     };
@@ -2460,7 +2451,7 @@ export async function setupFirstRun(page: Page): Promise<void> {
         currentProject: null,
         theme: "dark",
         sidebarOpen: true,
-        apiKeys: { anthropic: "", google: "", openai: "" },
+        apiKeys: { anthropic: "", google: "" },
         chatSessions: [],
         chatHistoryOpen: false,
         maxConcurrency: 3,
@@ -2488,7 +2479,6 @@ export async function setupComplete(page: Page): Promise<void> {
         setupComplete: true,
         currentStep: "complete",
         skipClaudeSetup: false,
-        skipCodexSetup: false,
       },
       version: 0,
     };
@@ -2527,14 +2517,6 @@ export async function clickSetupGetStarted(page: Page): Promise<void> {
  */
 export async function clickClaudeContinue(page: Page): Promise<void> {
   const button = await getByTestId(page, "claude-next-button");
-  await button.click();
-}
-
-/**
- * Click continue on Codex setup step
- */
-export async function clickCodexContinue(page: Page): Promise<void> {
-  const button = await getByTestId(page, "codex-next-button");
   await button.click();
 }
 

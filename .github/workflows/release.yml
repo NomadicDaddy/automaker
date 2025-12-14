@@ -48,6 +48,15 @@ jobs:
         # optional dependencies (e.g., @tailwindcss/oxide, lightningcss binaries)
         run: npm install
 
+      - name: Install Linux native bindings
+        # Workaround for npm optional dependencies bug (npm/cli#4828)
+        # Only needed on Linux - macOS and Windows get their bindings automatically
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          npm install --no-save --force \
+            @rollup/rollup-linux-x64-gnu@4.53.3 \
+            @tailwindcss/oxide-linux-x64-gnu@4.1.17
+
       - name: Extract and set version
         id: version
         shell: bash
