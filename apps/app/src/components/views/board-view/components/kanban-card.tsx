@@ -84,7 +84,7 @@ function formatThinkingLevel(level: ThinkingLevel | undefined): string {
   const labels: Record<ThinkingLevel, string> = {
     none: "",
     low: "Low",
-    medium: "Med",
+    medium: "Med", //
     high: "High",
     ultrathink: "Ultra",
   };
