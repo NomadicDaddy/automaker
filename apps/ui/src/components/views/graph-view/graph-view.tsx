@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { GraphCanvas } from './graph-canvas';
 import { useBoardBackground } from '../board-view/hooks';
+import { NodeActionCallbacks } from './hooks';
 
 interface GraphViewProps {
   features: Feature[];
@@ -13,6 +14,9 @@ interface GraphViewProps {
   onSearchQueryChange: (query: string) => void;
   onEditFeature: (feature: Feature) => void;
   onViewOutput: (feature: Feature) => void;
+  onStartTask?: (feature: Feature) => void;
+  onStopTask?: (feature: Feature) => void;
+  onResumeTask?: (feature: Feature) => void;
 }
 
 export function GraphView({
@@ -25,6 +29,9 @@ export function GraphView({
   onSearchQueryChange,
   onEditFeature,
   onViewOutput,
+  onStartTask,
+  onStopTask,
+  onResumeTask,
 }: GraphViewProps) {
   const { currentProject } = useAppStore();
 
@@ -56,17 +63,6 @@ export function GraphView({
     });
   }, [features, currentWorktreePath, currentWorktreeBranch, projectPath]);
 
-  // Handle node click - view details
-  const handleNodeClick = useCallback(
-    (featureId: string) => {
-      const feature = features.find((f) => f.id === featureId);
-      if (feature) {
-        onViewOutput(feature);
-      }
-    },
-    [features, onViewOutput]
-  );
-
   // Handle node double click - edit
   const handleNodeDoubleClick = useCallback(
     (featureId: string) => {
@@ -78,6 +74,44 @@ export function GraphView({
     [features, onEditFeature]
   );
 
+  // Node action callbacks for dropdown menu
+  const nodeActionCallbacks: NodeActionCallbacks = useMemo(
+    () => ({
+      onViewLogs: (featureId: string) => {
+        const feature = features.find((f) => f.id === featureId);
+        if (feature) {
+          onViewOutput(feature);
+        }
+      },
+      onStartTask: (featureId: string) => {
+        const feature = features.find((f) => f.id === featureId);
+        if (feature) {
+          onStartTask?.(feature);
+        }
+      },
+      onStopTask: (featureId: string) => {
+        const feature = features.find((f) => f.id === featureId);
+        if (feature) {
+          onStopTask?.(feature);
+        }
+      },
+      onResumeTask: (featureId: string) => {
+        const feature = features.find((f) => f.id === featureId);
+        if (feature) {
+          onResumeTask?.(feature);
+        }
+      },
+      onViewBranch: (featureId: string) => {
+        const feature = features.find((f) => f.id === featureId);
+        if (feature?.branchName) {
+          // TODO: Implement view branch action
+          console.log('View branch:', feature.branchName);
+        }
+      },
+    }),
+    [features, onViewOutput, onStartTask, onStopTask, onResumeTask]
+  );
+
   return (
     <div className="flex-1 overflow-hidden relative">
       <GraphCanvas
@@ -85,8 +119,8 @@ export function GraphView({
         runningAutoTasks={runningAutoTasks}
         searchQuery={searchQuery}
         onSearchQueryChange={onSearchQueryChange}
-        onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
+        nodeActionCallbacks={nodeActionCallbacks}
         backgroundStyle={backgroundImageStyle}
         className="h-full"
       />

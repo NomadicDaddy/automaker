@@ -1040,6 +1040,9 @@ export function BoardView() {
             onSearchQueryChange={setSearchQuery}
             onEditFeature={(feature) => setEditingFeature(feature)}
             onViewOutput={handleViewOutput}
+            onStartTask={handleStartImplementation}
+            onStopTask={handleForceStopFeature}
+            onResumeTask={handleResumeFeature}
           />
         )}
       </div>

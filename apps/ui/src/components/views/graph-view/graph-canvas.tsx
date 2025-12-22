@@ -27,6 +27,7 @@ import {
   useGraphFilter,
   type TaskNodeData,
   type GraphFilterState,
+  type NodeActionCallbacks,
 } from './hooks';
 import { cn } from '@/lib/utils';
 
@@ -46,8 +47,8 @@ interface GraphCanvasProps {
   runningAutoTasks: string[];
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
-  onNodeClick?: (featureId: string) => void;
   onNodeDoubleClick?: (featureId: string) => void;
+  nodeActionCallbacks?: NodeActionCallbacks;
   backgroundStyle?: React.CSSProperties;
   className?: string;
 }
@@ -57,8 +58,8 @@ function GraphCanvasInner({
   runningAutoTasks,
   searchQuery,
   onSearchQueryChange,
-  onNodeClick,
   onNodeDoubleClick,
+  nodeActionCallbacks,
   backgroundStyle,
   className,
 }: GraphCanvasProps) {
@@ -84,6 +85,7 @@ function GraphCanvasInner({
     features,
     runningAutoTasks,
     filterResult,
+    actionCallbacks: nodeActionCallbacks,
   });
 
   // Apply layout
@@ -117,14 +119,6 @@ function GraphCanvasInner({
     setSelectedCategories([]);
     setIsNegativeFilter(false);
   }, [onSearchQueryChange]);
-
-  // Handle node click
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node<TaskNodeData>) => {
-      onNodeClick?.(node.id);
-    },
-    [onNodeClick]
-  );
 
   // Handle node double click
   const handleNodeDoubleClick = useCallback(
@@ -160,7 +154,6 @@ function GraphCanvasInner({
         edges={edges}
         onNodesChange={isLocked ? undefined : onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

@@ -12,6 +12,12 @@ export interface TaskNodeData extends Feature {
   isMatched?: boolean;
   isHighlighted?: boolean;
   isDimmed?: boolean;
+  // Action callbacks
+  onViewLogs?: () => void;
+  onStartTask?: () => void;
+  onStopTask?: () => void;
+  onResumeTask?: () => void;
+  onViewBranch?: () => void;
 }
 
 export type TaskNode = Node<TaskNodeData, 'task'>;
@@ -22,17 +28,31 @@ export type DependencyEdge = Edge<{
   isDimmed?: boolean;
 }>;
 
+export interface NodeActionCallbacks {
+  onViewLogs?: (featureId: string) => void;
+  onStartTask?: (featureId: string) => void;
+  onStopTask?: (featureId: string) => void;
+  onResumeTask?: (featureId: string) => void;
+  onViewBranch?: (featureId: string) => void;
+}
+
 interface UseGraphNodesProps {
   features: Feature[];
   runningAutoTasks: string[];
   filterResult?: GraphFilterResult;
+  actionCallbacks?: NodeActionCallbacks;
 }
 
 /**
  * Transforms features into React Flow nodes and edges
  * Creates dependency edges based on feature.dependencies array
  */
-export function useGraphNodes({ features, runningAutoTasks, filterResult }: UseGraphNodesProps) {
+export function useGraphNodes({
+  features,
+  runningAutoTasks,
+  filterResult,
+  actionCallbacks,
+}: UseGraphNodesProps) {
   const { nodes, edges } = useMemo(() => {
     const nodeList: TaskNode[] = [];
     const edgeList: DependencyEdge[] = [];
@@ -70,6 +90,22 @@ export function useGraphNodes({ features, runningAutoTasks, filterResult }: UseG
           isMatched,
           isHighlighted,
           isDimmed,
+          // Action callbacks (bound to this feature's ID)
+          onViewLogs: actionCallbacks?.onViewLogs
+            ? () => actionCallbacks.onViewLogs!(feature.id)
+            : undefined,
+          onStartTask: actionCallbacks?.onStartTask
+            ? () => actionCallbacks.onStartTask!(feature.id)
+            : undefined,
+          onStopTask: actionCallbacks?.onStopTask
+            ? () => actionCallbacks.onStopTask!(feature.id)
+            : undefined,
+          onResumeTask: actionCallbacks?.onResumeTask
+            ? () => actionCallbacks.onResumeTask!(feature.id)
+            : undefined,
+          onViewBranch: actionCallbacks?.onViewBranch
+            ? () => actionCallbacks.onViewBranch!(feature.id)
+            : undefined,
         },
       };
 
@@ -107,7 +143,7 @@ export function useGraphNodes({ features, runningAutoTasks, filterResult }: UseG
     });
 
     return { nodes: nodeList, edges: edgeList };
-  }, [features, runningAutoTasks, filterResult]);
+  }, [features, runningAutoTasks, filterResult, actionCallbacks]);
 
   return { nodes, edges };
 }

@@ -10,8 +10,10 @@ import {
   Play,
   Pause,
   Eye,
-  MoreHorizontal,
+  MoreVertical,
   GitBranch,
+  Terminal,
+  RotateCcw,
 } from 'lucide-react';
 import { TaskNodeData } from '../hooks/use-graph-nodes';
 import { Button } from '@/components/ui/button';
@@ -81,6 +83,9 @@ export const TaskNode = memo(function TaskNode({ data, selected }: TaskNodeProps
   const isMatched = data.isMatched ?? false;
   const isHighlighted = data.isHighlighted ?? false;
   const isDimmed = data.isDimmed ?? false;
+
+  // Task is stopped if it's in_progress but not actively running
+  const isStopped = data.status === 'in_progress' && !data.isRunning;
 
   return (
     <>
@@ -167,35 +172,114 @@ export const TaskNode = memo(function TaskNode({ data, selected }: TaskNodeProps
               </TooltipProvider>
             )}
 
+            {/* Stopped indicator - task is in_progress but not actively running */}
+            {isStopped && (
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="p-1 rounded bg-[var(--status-warning-bg)]">
+                      <Pause className="w-3 h-3 text-[var(--status-warning)]" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs max-w-[200px]">
+                    <p>Task paused - click menu to resume</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Actions dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-background/50">
-                  <MoreHorizontal className="w-4 h-4" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-7 w-7 p-0 rounded-md',
+                    'bg-background/60 hover:bg-background',
+                    'border border-border/50 hover:border-border',
+                    'shadow-sm',
+                    'transition-all duration-150'
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="w-4 h-4 text-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem className="text-xs">
+              <DropdownMenuContent
+                align="end"
+                className="w-44"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenuItem
+                  className="text-xs cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onViewLogs?.();
+                  }}
+                >
+                  <Terminal className="w-3 h-3 mr-2" />
+                  View Agent Logs
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-xs cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onViewLogs?.();
+                  }}
+                >
                   <Eye className="w-3 h-3 mr-2" />
                   View Details
                 </DropdownMenuItem>
                 {data.status === 'backlog' && !data.isBlocked && (
-                  <DropdownMenuItem className="text-xs">
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onStartTask?.();
+                    }}
+                  >
                     <Play className="w-3 h-3 mr-2" />
                     Start Task
                   </DropdownMenuItem>
                 )}
                 {data.isRunning && (
-                  <DropdownMenuItem className="text-xs text-[var(--status-error)]">
+                  <DropdownMenuItem
+                    className="text-xs text-[var(--status-error)] cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onStopTask?.();
+                    }}
+                  >
                     <Pause className="w-3 h-3 mr-2" />
                     Stop Task
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-xs">
-                  <GitBranch className="w-3 h-3 mr-2" />
-                  View Branch
-                </DropdownMenuItem>
+                {isStopped && (
+                  <DropdownMenuItem
+                    className="text-xs text-[var(--status-success)] cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onResumeTask?.();
+                    }}
+                  >
+                    <RotateCcw className="w-3 h-3 mr-2" />
+                    Resume Task
+                  </DropdownMenuItem>
+                )}
+                {Boolean(data.branchName) && <DropdownMenuSeparator />}
+                {Boolean(data.branchName) && (
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onViewBranch?.();
+                    }}
+                  >
+                    <GitBranch className="w-3 h-3 mr-2" />
+                    View Branch
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -220,6 +304,16 @@ export const TaskNode = memo(function TaskNode({ data, selected }: TaskNodeProps
                 <div className="h-full bg-[var(--status-in-progress)] rounded-full animate-progress-indeterminate" />
               </div>
               <span className="text-[10px] text-muted-foreground">Running...</span>
+            </div>
+          )}
+
+          {/* Paused indicator for stopped tasks */}
+          {isStopped && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full w-1/2 bg-[var(--status-warning)] rounded-full" />
+              </div>
+              <span className="text-[10px] text-[var(--status-warning)] font-medium">Paused</span>
             </div>
           )}
 
