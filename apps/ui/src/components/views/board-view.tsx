@@ -369,6 +369,16 @@ export function BoardView() {
   const selectedWorktreeBranch =
     currentWorktreeBranch || worktrees.find((w) => w.isMain)?.branch || 'main';
 
+  // Use column features hook - must be before useBoardActions
+  const { getColumnFeatures, completedFeatures } = useBoardColumnFeatures({
+    features: hookFeatures,
+    runningAutoTasks,
+    searchQuery,
+    currentWorktreePath,
+    currentWorktreeBranch,
+    projectPath: currentProject?.path || null,
+  });
+
   // Extract all action handlers into a hook
   const {
     handleAddFeature,
@@ -390,6 +400,8 @@ export function BoardView() {
     handleForceStopFeature,
     handleStartNextFeatures,
     handleArchiveAllVerified,
+    handleValidateFeature,
+    handleValidateAllBacklog,
   } = useBoardActions({
     currentProject,
     features: hookFeatures,
@@ -435,6 +447,7 @@ export function BoardView() {
       setCurrentWorktree(currentProject.path, newWorktree.path, newWorktree.branch);
     },
     currentWorktreeBranch,
+    getColumnFeatures,
   });
 
   // Handler for addressing PR comments - creates a feature and starts it automatically
@@ -785,16 +798,6 @@ export function BoardView() {
     handleStartImplementation,
   });
 
-  // Use column features hook
-  const { getColumnFeatures, completedFeatures } = useBoardColumnFeatures({
-    features: hookFeatures,
-    runningAutoTasks,
-    searchQuery,
-    currentWorktreePath,
-    currentWorktreeBranch,
-    projectPath: currentProject?.path || null,
-  });
-
   // Use background hook
   const { backgroundSettings, backgroundImageStyle } = useBoardBackground({
     currentProject,
@@ -1068,6 +1071,8 @@ export function BoardView() {
               setSpawnParentFeature(feature);
               setShowAddDialog(true);
             }}
+            onValidate={handleValidateFeature}
+            onValidateAllBacklog={handleValidateAllBacklog}
             featuresWithContext={featuresWithContext}
             runningAutoTasks={runningAutoTasks}
             shortcuts={shortcuts}

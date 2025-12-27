@@ -340,6 +340,19 @@ export interface FeaturesAPI {
   generateTitle: (
     description: string
   ) => Promise<{ success: boolean; title?: string; error?: string }>;
+  validateFeature: (
+    projectPath: string,
+    featureId: string
+  ) => Promise<{
+    success: boolean;
+    validation?: {
+      assessment: 'FULLY_IMPLEMENTED' | 'PARTIALLY_IMPLEMENTED' | 'NOT_IMPLEMENTED';
+      reasoning: string;
+      evidence: string;
+      fullResponse: string;
+    };
+    error?: string;
+  }>;
 }
 
 export interface AutoModeAPI {
