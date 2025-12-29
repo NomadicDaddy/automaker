@@ -61,10 +61,13 @@ export function SettingsView() {
   // Hide usage tracking when using API key (only show for Claude Code CLI users)
   // Check both user-entered API key and environment variable ANTHROPIC_API_KEY
   // Also hide on Windows for now (CLI usage command not supported)
+  // Only show if CLI has been verified/authenticated
   const isWindows =
     typeof navigator !== 'undefined' && navigator.platform?.toLowerCase().includes('win');
   const hasApiKey = !!apiKeys.anthropic || !!claudeAuthStatus?.hasEnvApiKey;
-  const showUsageTracking = !hasApiKey && !isWindows;
+  const isCliVerified =
+    claudeAuthStatus?.authenticated && claudeAuthStatus?.method === 'cli_authenticated';
+  const showUsageTracking = !hasApiKey && !isWindows && isCliVerified;
 
   // Convert electron Project to settings-view Project type
   const convertProject = (project: ElectronProject | null): SettingsProject | null => {

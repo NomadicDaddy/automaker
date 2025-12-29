@@ -10,24 +10,8 @@ describe('auth.ts', () => {
     vi.resetModules();
   });
 
-  describe('authMiddleware - no API key', () => {
-    it('should call next() when no API key is set', async () => {
-      delete process.env.AUTOMAKER_API_KEY;
-
-      const { authMiddleware } = await import('@/lib/auth.js');
-      const { req, res, next } = createMockExpressContext();
-
-      authMiddleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('authMiddleware - with API key', () => {
-    it('should reject request without API key header', async () => {
-      process.env.AUTOMAKER_API_KEY = 'test-secret-key';
-
+  describe('authMiddleware', () => {
+    it('should reject request without any authentication', async () => {
       const { authMiddleware } = await import('@/lib/auth.js');
       const { req, res, next } = createMockExpressContext();
 
@@ -36,7 +20,7 @@ describe('auth.ts', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        error: 'Authentication required. Provide X-API-Key header.',
+        error: 'Authentication required.',
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -73,43 +57,20 @@ describe('auth.ts', () => {
   });
 
   describe('isAuthEnabled', () => {
-    it('should return false when no API key is set', async () => {
-      delete process.env.AUTOMAKER_API_KEY;
-
-      const { isAuthEnabled } = await import('@/lib/auth.js');
-      expect(isAuthEnabled()).toBe(false);
-    });
-
-    it('should return true when API key is set', async () => {
-      process.env.AUTOMAKER_API_KEY = 'test-key';
-
+    it('should always return true (auth is always required)', async () => {
       const { isAuthEnabled } = await import('@/lib/auth.js');
       expect(isAuthEnabled()).toBe(true);
     });
   });
 
   describe('getAuthStatus', () => {
-    it('should return disabled status when no API key', async () => {
-      delete process.env.AUTOMAKER_API_KEY;
-
-      const { getAuthStatus } = await import('@/lib/auth.js');
-      const status = getAuthStatus();
-
-      expect(status).toEqual({
-        enabled: false,
-        method: 'none',
-      });
-    });
-
-    it('should return enabled status when API key is set', async () => {
-      process.env.AUTOMAKER_API_KEY = 'test-key';
-
+    it('should return enabled status with api_key_or_session method', async () => {
       const { getAuthStatus } = await import('@/lib/auth.js');
       const status = getAuthStatus();
 
       expect(status).toEqual({
         enabled: true,
-        method: 'api_key',
+        method: 'api_key_or_session',
       });
     });
   });

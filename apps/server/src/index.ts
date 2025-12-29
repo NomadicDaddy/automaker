@@ -10,18 +10,14 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import cookie from 'cookie';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 
 import { createEventEmitter, type EventEmitter } from './lib/events.js';
 import { initAllowedPaths } from '@automaker/platform';
-import {
-  authMiddleware,
-  validateSession,
-  validateApiKey,
-  getSessionCookieName,
-} from './lib/auth.js';
+import { authMiddleware, validateWsConnectionToken, checkRawAuthentication } from './lib/auth.js';
 import { createAuthRoutes } from './routes/auth/index.js';
 import { createFsRoutes } from './routes/fs/index.js';
 import { createHealthRoutes, createDetailedHandler } from './routes/health/index.js';
@@ -98,7 +94,7 @@ const app = express();
 // Middleware
 // Custom colored logger showing only endpoint and status code (configurable via ENABLE_REQUEST_LOGGING env var)
 if (ENABLE_REQUEST_LOGGING) {
-  morgan.token('status-colored', (req, res) => {
+  morgan.token('status-colored', (_req, res) => {
     const status = res.statusCode;
     if (status >= 500) return `\x1b[31m${status}\x1b[0m`; // Red for server errors
     if (status >= 400) return `\x1b[33m${status}\x1b[0m`; // Yellow for client errors
@@ -226,46 +222,31 @@ const terminalService = getTerminalService();
 function authenticateWebSocket(request: import('http').IncomingMessage): boolean {
   const url = new URL(request.url || '', `http://${request.headers.host}`);
 
-  // Check for API key in header (Electron mode)
-  const headerKey = request.headers['x-api-key'] as string | undefined;
-  if (headerKey && validateApiKey(headerKey)) {
-    return true;
-  }
+  // Convert URL search params to query object
+  const query: Record<string, string | undefined> = {};
+  url.searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
 
-  // Check for session token in header (web mode with explicit token)
-  const sessionTokenHeader = request.headers['x-session-token'] as string | undefined;
-  if (sessionTokenHeader && validateSession(sessionTokenHeader)) {
-    return true;
-  }
-
-  // Check for API key in query param (fallback for WebSocket)
-  const queryKey = url.searchParams.get('apiKey');
-  if (queryKey && validateApiKey(queryKey)) {
-    return true;
-  }
-
-  // Check for session token in query param (fallback for WebSocket in web mode)
-  const queryToken = url.searchParams.get('sessionToken');
-  if (queryToken && validateSession(queryToken)) {
-    return true;
-  }
-
-  // Check for session cookie (web mode)
+  // Parse cookies from header
   const cookieHeader = request.headers.cookie;
-  if (cookieHeader) {
-    const cookieName = getSessionCookieName();
-    const cookies = cookieHeader.split(';').reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        acc[key] = value;
-        return acc;
-      },
-      {} as Record<string, string>
-    );
-    const sessionToken = cookies[cookieName];
-    if (sessionToken && validateSession(sessionToken)) {
-      return true;
-    }
+  const cookies = cookieHeader ? cookie.parse(cookieHeader) : {};
+
+  // Use shared authentication logic for standard auth methods
+  if (
+    checkRawAuthentication(
+      request.headers as Record<string, string | string[] | undefined>,
+      query,
+      cookies
+    )
+  ) {
+    return true;
+  }
+
+  // Additionally check for short-lived WebSocket connection token (WebSocket-specific)
+  const wsToken = url.searchParams.get('wsToken');
+  if (wsToken && validateWsConnectionToken(wsToken)) {
+    return true;
   }
 
   return false;

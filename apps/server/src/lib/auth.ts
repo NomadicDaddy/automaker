@@ -18,9 +18,23 @@ const API_KEY_FILE = path.join(DATA_DIR, '.api-key');
 const SESSIONS_FILE = path.join(DATA_DIR, '.sessions');
 const SESSION_COOKIE_NAME = 'automaker_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const WS_TOKEN_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes for WebSocket connection tokens
 
 // Session store - persisted to file for survival across server restarts
 const validSessions = new Map<string, { createdAt: number; expiresAt: number }>();
+
+// Short-lived WebSocket connection tokens (in-memory only, not persisted)
+const wsConnectionTokens = new Map<string, { createdAt: number; expiresAt: number }>();
+
+// Clean up expired WebSocket tokens periodically
+setInterval(() => {
+  const now = Date.now();
+  wsConnectionTokens.forEach((data, token) => {
+    if (data.expiresAt <= now) {
+      wsConnectionTokens.delete(token);
+    }
+  });
+}, 60 * 1000); // Clean up every minute
 
 /**
  * Load sessions from file on startup
@@ -56,13 +70,16 @@ function loadSessions(): void {
 }
 
 /**
- * Save sessions to file
+ * Save sessions to file (async)
  */
-function saveSessions(): void {
+async function saveSessions(): Promise<void> {
   try {
-    fs.mkdirSync(path.dirname(SESSIONS_FILE), { recursive: true });
+    await fs.promises.mkdir(path.dirname(SESSIONS_FILE), { recursive: true });
     const sessions = Array.from(validSessions.entries());
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions), { encoding: 'utf-8', mode: 0o600 });
+    await fs.promises.writeFile(SESSIONS_FILE, JSON.stringify(sessions), {
+      encoding: 'utf-8',
+      mode: 0o600,
+    });
   } catch (error) {
     console.error('[Auth] Failed to save sessions:', error);
   }
@@ -134,19 +151,20 @@ function generateSessionToken(): string {
 /**
  * Create a new session and return the token
  */
-export function createSession(): string {
+export async function createSession(): Promise<string> {
   const token = generateSessionToken();
   const now = Date.now();
   validSessions.set(token, {
     createdAt: now,
     expiresAt: now + SESSION_MAX_AGE_MS,
   });
-  saveSessions(); // Persist to file
+  await saveSessions(); // Persist to file
   return token;
 }
 
 /**
  * Validate a session token
+ * Note: This returns synchronously but triggers async persistence if session expired
  */
 export function validateSession(token: string): boolean {
   const session = validSessions.get(token);
@@ -154,7 +172,8 @@ export function validateSession(token: string): boolean {
 
   if (Date.now() > session.expiresAt) {
     validSessions.delete(token);
-    saveSessions(); // Persist removal
+    // Fire-and-forget: persist removal asynchronously
+    saveSessions().catch((err) => console.error('[Auth] Error saving sessions:', err));
     return false;
   }
 
@@ -164,9 +183,39 @@ export function validateSession(token: string): boolean {
 /**
  * Invalidate a session token
  */
-export function invalidateSession(token: string): void {
+export async function invalidateSession(token: string): Promise<void> {
   validSessions.delete(token);
-  saveSessions(); // Persist removal
+  await saveSessions(); // Persist removal
+}
+
+/**
+ * Create a short-lived WebSocket connection token
+ * Used for initial WebSocket handshake authentication
+ */
+export function createWsConnectionToken(): string {
+  const token = generateSessionToken();
+  const now = Date.now();
+  wsConnectionTokens.set(token, {
+    createdAt: now,
+    expiresAt: now + WS_TOKEN_MAX_AGE_MS,
+  });
+  return token;
+}
+
+/**
+ * Validate a WebSocket connection token
+ * These tokens are single-use and short-lived (5 minutes)
+ */
+export function validateWsConnectionToken(token: string): boolean {
+  const tokenData = wsConnectionTokens.get(token);
+  if (!tokenData) return false;
+
+  if (Date.now() > tokenData.expiresAt) {
+    wsConnectionTokens.delete(token);
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -203,6 +252,58 @@ export function getSessionCookieName(): string {
 }
 
 /**
+ * Authentication result type
+ */
+type AuthResult =
+  | { authenticated: true }
+  | { authenticated: false; errorType: 'invalid_api_key' | 'invalid_session' | 'no_auth' };
+
+/**
+ * Core authentication check - shared between middleware and status check
+ * Extracts auth credentials from various sources and validates them
+ */
+function checkAuthentication(
+  headers: Record<string, string | string[] | undefined>,
+  query: Record<string, string | undefined>,
+  cookies: Record<string, string | undefined>
+): AuthResult {
+  // Check for API key in header (Electron mode)
+  const headerKey = headers['x-api-key'] as string | undefined;
+  if (headerKey) {
+    if (headerKey === API_KEY) {
+      return { authenticated: true };
+    }
+    return { authenticated: false, errorType: 'invalid_api_key' };
+  }
+
+  // Check for session token in header (web mode with explicit token)
+  const sessionTokenHeader = headers['x-session-token'] as string | undefined;
+  if (sessionTokenHeader) {
+    if (validateSession(sessionTokenHeader)) {
+      return { authenticated: true };
+    }
+    return { authenticated: false, errorType: 'invalid_session' };
+  }
+
+  // Check for API key in query parameter (fallback)
+  const queryKey = query.apiKey;
+  if (queryKey) {
+    if (queryKey === API_KEY) {
+      return { authenticated: true };
+    }
+    return { authenticated: false, errorType: 'invalid_api_key' };
+  }
+
+  // Check for session cookie (web mode)
+  const sessionToken = cookies[SESSION_COOKIE_NAME];
+  if (sessionToken && validateSession(sessionToken)) {
+    return { authenticated: true };
+  }
+
+  return { authenticated: false, errorType: 'no_auth' };
+}
+
+/**
  * Authentication middleware
  *
  * Accepts either:
@@ -212,60 +313,38 @@ export function getSessionCookieName(): string {
  * 4. Session cookie (for web mode)
  */
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // Check for API key in header (Electron mode)
-  const headerKey = req.headers['x-api-key'] as string | undefined;
-  if (headerKey) {
-    if (headerKey === API_KEY) {
-      next();
-      return;
-    }
-    res.status(403).json({
-      success: false,
-      error: 'Invalid API key.',
-    });
-    return;
-  }
+  const result = checkAuthentication(
+    req.headers as Record<string, string | string[] | undefined>,
+    req.query as Record<string, string | undefined>,
+    (req.cookies || {}) as Record<string, string | undefined>
+  );
 
-  // Check for session token in header (web mode with explicit token)
-  const sessionTokenHeader = req.headers['x-session-token'] as string | undefined;
-  if (sessionTokenHeader) {
-    if (validateSession(sessionTokenHeader)) {
-      next();
-      return;
-    }
-    res.status(403).json({
-      success: false,
-      error: 'Invalid or expired session token.',
-    });
-    return;
-  }
-
-  // Check for API key in query parameter (fallback)
-  const queryKey = req.query.apiKey as string | undefined;
-  if (queryKey) {
-    if (queryKey === API_KEY) {
-      next();
-      return;
-    }
-    res.status(403).json({
-      success: false,
-      error: 'Invalid API key.',
-    });
-    return;
-  }
-
-  // Check for session cookie (web mode)
-  const sessionToken = req.cookies?.[SESSION_COOKIE_NAME] as string | undefined;
-  if (sessionToken && validateSession(sessionToken)) {
+  if (result.authenticated) {
     next();
     return;
   }
 
-  // No valid authentication
-  res.status(401).json({
-    success: false,
-    error: 'Authentication required.',
-  });
+  // Return appropriate error based on what failed
+  switch (result.errorType) {
+    case 'invalid_api_key':
+      res.status(403).json({
+        success: false,
+        error: 'Invalid API key.',
+      });
+      break;
+    case 'invalid_session':
+      res.status(403).json({
+        success: false,
+        error: 'Invalid or expired session token.',
+      });
+      break;
+    case 'no_auth':
+    default:
+      res.status(401).json({
+        success: false,
+        error: 'Authentication required.',
+      });
+  }
 }
 
 /**
@@ -289,29 +368,22 @@ export function getAuthStatus(): { enabled: boolean; method: string } {
  * Check if a request is authenticated (for status endpoint)
  */
 export function isRequestAuthenticated(req: Request): boolean {
-  // Check API key header
-  const headerKey = req.headers['x-api-key'] as string | undefined;
-  if (headerKey && headerKey === API_KEY) {
-    return true;
-  }
+  const result = checkAuthentication(
+    req.headers as Record<string, string | string[] | undefined>,
+    req.query as Record<string, string | undefined>,
+    (req.cookies || {}) as Record<string, string | undefined>
+  );
+  return result.authenticated;
+}
 
-  // Check session token header
-  const sessionTokenHeader = req.headers['x-session-token'] as string | undefined;
-  if (sessionTokenHeader && validateSession(sessionTokenHeader)) {
-    return true;
-  }
-
-  // Check query parameter
-  const queryKey = req.query.apiKey as string | undefined;
-  if (queryKey && queryKey === API_KEY) {
-    return true;
-  }
-
-  // Check cookie
-  const sessionToken = req.cookies?.[SESSION_COOKIE_NAME] as string | undefined;
-  if (sessionToken && validateSession(sessionToken)) {
-    return true;
-  }
-
-  return false;
+/**
+ * Check if raw credentials are authenticated
+ * Used for WebSocket authentication where we don't have Express request objects
+ */
+export function checkRawAuthentication(
+  headers: Record<string, string | string[] | undefined>,
+  query: Record<string, string | undefined>,
+  cookies: Record<string, string | undefined>
+): boolean {
+  return checkAuthentication(headers, query, cookies).authenticated;
 }

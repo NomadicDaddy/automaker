@@ -20,6 +20,7 @@ import {
   getSessionCookieOptions,
   getSessionCookieName,
   isRequestAuthenticated,
+  createWsConnectionToken,
 } from '../../lib/auth.js';
 
 /**
@@ -51,7 +52,7 @@ export function createAuthRoutes(): Router {
    * Validates the API key and sets a session cookie.
    * Body: { apiKey: string }
    */
-  router.post('/login', (req, res) => {
+  router.post('/login', async (req, res) => {
     const { apiKey } = req.body as { apiKey?: string };
 
     if (!apiKey) {
@@ -71,7 +72,7 @@ export function createAuthRoutes(): Router {
     }
 
     // Create session and set cookie
-    const sessionToken = createSession();
+    const sessionToken = await createSession();
     const cookieOptions = getSessionCookieOptions();
     const cookieName = getSessionCookieName();
 
@@ -87,35 +88,27 @@ export function createAuthRoutes(): Router {
   /**
    * GET /api/auth/token
    *
-   * Returns the session token if the user has a valid session cookie.
-   * This allows the UI to get a token for explicit header-based auth
-   * after a page refresh (when the token in memory is lost).
+   * Generates a short-lived WebSocket connection token if the user has a valid session.
+   * This token is used for initial WebSocket handshake authentication and expires in 5 minutes.
+   * The token is NOT the session cookie value - it's a separate, short-lived token.
    */
   router.get('/token', (req, res) => {
-    const cookieName = getSessionCookieName();
-    const sessionToken = req.cookies?.[cookieName] as string | undefined;
-
-    if (!sessionToken) {
-      res.status(401).json({
-        success: false,
-        error: 'No session cookie found.',
-      });
-      return;
-    }
-
-    // Validate the session is still valid
+    // Validate the session is still valid (via cookie, API key, or session token header)
     if (!isRequestAuthenticated(req)) {
       res.status(401).json({
         success: false,
-        error: 'Session expired.',
+        error: 'Authentication required.',
       });
       return;
     }
 
-    // Return the existing session token for header-based auth
+    // Generate a new short-lived WebSocket connection token
+    const wsToken = createWsConnectionToken();
+
     res.json({
       success: true,
-      token: sessionToken,
+      token: wsToken,
+      expiresIn: 300, // 5 minutes in seconds
     });
   });
 
@@ -124,12 +117,12 @@ export function createAuthRoutes(): Router {
    *
    * Clears the session cookie and invalidates the session.
    */
-  router.post('/logout', (req, res) => {
+  router.post('/logout', async (req, res) => {
     const cookieName = getSessionCookieName();
     const sessionToken = req.cookies?.[cookieName] as string | undefined;
 
     if (sessionToken) {
-      invalidateSession(sessionToken);
+      await invalidateSession(sessionToken);
     }
 
     // Clear the cookie
