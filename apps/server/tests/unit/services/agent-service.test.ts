@@ -7,6 +7,14 @@ import * as promptBuilder from '@automaker/utils';
 import * as contextLoader from '@automaker/utils';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
 
+// Create a shared mock logger instance for assertions using vi.hoisted
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+}));
+
 vi.mock('fs/promises');
 vi.mock('@/providers/provider-factory.js');
 vi.mock('@automaker/utils', async () => {
@@ -16,12 +24,7 @@ vi.mock('@automaker/utils', async () => {
     loadContextFiles: vi.fn(),
     buildPromptWithImages: vi.fn(),
     readImageAsBase64: vi.fn(),
-    createLogger: vi.fn(() => ({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    })),
+    createLogger: vi.fn(() => mockLogger),
   };
 });
 
@@ -244,7 +247,7 @@ describe('agent-service.ts', () => {
         imagePaths: ['/path/test.png'],
       });
 
-      // Logger will be called with error, but we don't need to assert it
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should use custom model if provided', async () => {

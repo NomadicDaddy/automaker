@@ -12,6 +12,7 @@ import {
   buildPromptWithImages,
   isAbortError,
   loadContextFiles,
+  createLogger,
 } from '@automaker/utils';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
@@ -76,6 +77,7 @@ export class AgentService {
   private metadataFile: string;
   private events: EventEmitter;
   private settingsService: SettingsService | null = null;
+  private logger = createLogger('AgentService');
 
   constructor(dataDir: string, events: EventEmitter, settingsService?: SettingsService) {
     this.stateDir = path.join(dataDir, 'agent-sessions');
@@ -149,12 +151,12 @@ export class AgentService {
   }) {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      console.error('[AgentService] ERROR: Session not found:', sessionId);
+      this.logger.error('ERROR: Session not found:', sessionId);
       throw new Error(`Session ${sessionId} not found`);
     }
 
     if (session.isRunning) {
-      console.error('[AgentService] ERROR: Agent already running for session:', sessionId);
+      this.logger.error('ERROR: Agent already running for session:', sessionId);
       throw new Error('Agent is already processing a message');
     }
 
@@ -176,7 +178,7 @@ export class AgentService {
             filename: imageData.filename,
           });
         } catch (error) {
-          console.error(`[AgentService] Failed to load image ${imagePath}:`, error);
+          this.logger.error(`Failed to load image ${imagePath}:`, error);
         }
       }
     }
@@ -392,7 +394,7 @@ export class AgentService {
         return { success: false, aborted: true };
       }
 
-      console.error('[AgentService] Error:', error);
+      this.logger.error('Error:', error);
 
       session.isRunning = false;
       session.abortController = null;
@@ -486,7 +488,7 @@ export class AgentService {
       await secureFs.writeFile(sessionFile, JSON.stringify(messages, null, 2), 'utf-8');
       await this.updateSessionTimestamp(sessionId);
     } catch (error) {
-      console.error('[AgentService] Failed to save session:', error);
+      this.logger.error('Failed to save session:', error);
     }
   }
 
@@ -720,7 +722,7 @@ export class AgentService {
     try {
       await secureFs.writeFile(queueFile, JSON.stringify(queue, null, 2), 'utf-8');
     } catch (error) {
-      console.error('[AgentService] Failed to save queue state:', error);
+      this.logger.error('Failed to save queue state:', error);
     }
   }
 
@@ -769,7 +771,7 @@ export class AgentService {
         model: nextPrompt.model,
       });
     } catch (error) {
-      console.error('[AgentService] Failed to process queued prompt:', error);
+      this.logger.error('Failed to process queued prompt:', error);
       this.emitAgentEvent(sessionId, {
         type: 'queue_error',
         error: (error as Error).message,

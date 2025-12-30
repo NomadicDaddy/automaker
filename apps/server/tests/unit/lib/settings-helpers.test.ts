@@ -5,14 +5,15 @@ import type { SettingsService } from '@/services/settings-service.js';
 // Mock the logger
 vi.mock('@automaker/utils', async () => {
   const actual = await vi.importActual('@automaker/utils');
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  };
   return {
     ...actual,
-    createLogger: () => ({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    }),
+    createLogger: () => mockLogger,
   };
 });
 
