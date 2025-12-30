@@ -179,7 +179,12 @@ export class ClaudeUsageService {
         if (!settled) {
           settled = true;
           ptyProcess.kill();
-          reject(new Error('Command timed out'));
+          // Don't fail if we have data - return it instead
+          if (output.includes('Current session')) {
+            resolve(output);
+          } else {
+            reject(new Error('Command timed out'));
+          }
         }
       }, this.timeout);
 
@@ -193,6 +198,13 @@ export class ClaudeUsageService {
           setTimeout(() => {
             if (!settled) {
               ptyProcess.write('\x1b'); // Send escape key
+
+              // Fallback: if ESC doesn't exit (Linux), use SIGTERM after 2s
+              setTimeout(() => {
+                if (!settled) {
+                  ptyProcess.kill('SIGTERM');
+                }
+              }, 2000);
             }
           }, 2000);
         }
